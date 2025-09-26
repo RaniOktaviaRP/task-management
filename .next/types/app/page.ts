@@ -1,4 +1,4 @@
-// File: C:\Users\WINDOWS 11\sop-insight-cerdas\src\app\page.tsx
+// File: C:\Users\RANI OKTAVIA RIZKY P\nestjs - Copy\sop-insight-cerdas\src\app\page.tsx
 import * as entry from '../../../src/app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

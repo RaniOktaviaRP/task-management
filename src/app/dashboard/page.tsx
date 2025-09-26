@@ -1,451 +1,591 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Search, Filter, FileText, Eye, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
-import AppLayout from '@/components/AppLayout';
-import { api } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { Sun, Flame, Clock3, Calendar, AlertTriangle, Users } from "lucide-react";
+import { TaskCard, type Task } from "@/components/TaskCard";
+import { WeeklyGoals } from "@/components/WeeklyGoals";
+import { CapacityBar } from "@/components/CapacityBar";
+import { QuickAdd } from "@/components/QuickAdd";
+import { PendingTasks } from "@/components/PendingTasks";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useProjects } from "@/hooks/useProjects";
+import { useAuth } from "@/hooks/useAuth";
+import { useUsers } from "@/hooks/useUsers";
+import { useToast } from "@/hooks/use-toast";
+import Layout from "@/components/Layout";
+import Cookies from "js-cookie"; // Changed from cookies-next to js-cookie
 
-interface APISOP {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  category_id?: number;
-  division_id?: number;
-  category?: string;
-  division?: string;
-  tags?: string | any[];
-  created_at: string;
-  updated_at: string;
-  status_reason?: string;
-}
+// Helper function to map database task to UI task
+const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
+  return {
+    id: dbTask.id,
+    title: dbTask.title,
+    project: projectName,
+    goal: "", // Could be derived from project description
+    effort: dbTask.effort === 1 ? "S" : dbTask.effort === 2 ? "M" : "L",
+    priority: dbTask.priority === "high" ? "High" : dbTask.priority === "medium" ? "Med" : "Low",
+    status: dbTask.status,
+    difficulty: dbTask.difficulty_level,
+    deliverable: dbTask.deliverable,
+    bottleneck: dbTask.bottleneck,
+    progress: dbTask.progress || "",
+    continueTomorrow: dbTask.continue_tomorrow || false
+  };
+};
 
-interface APICategory {
-  id: number;
-  category_name: string;
-  description: string;
-}
+// Function to get authorization headers
+const getAuthHeaders = () => {
+  const token = Cookies.get('token'); // Changed from getCookie to Cookies.get
+  const headers = {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
+  return headers;
+};
 
-interface APIDivision {
-  id: number;
-  division_name: string;
-  description: string;
-}
+export default function Index() {
+  const { user, session } = useAuth();
+  const { projects, loading, deleteTask: deleteDbTask, refetch } = useProjects();
+  const { toast } = useToast();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [currentMode, setCurrentMode] = useState<"progress" | "midday" | "eod" | "carryover">("progress");
+  const [streak, setStreak] = useState(3);
+  const [expandedTaskDetails, setExpandedTaskDetails] = useState<Set<string>>(new Set());
+  const [showSCE, setShowSCE] = useState(false);
+  const { users: usersData, loading: usersLoading } = useUsers();
+  const [users, setUsers] = useState<any[]>([]);
 
-export default function DashboardPage() {
-  const [apiSOPs, setApiSOPs] = useState<APISOP[]>([]);
-  const [categories, setCategories] = useState<APICategory[]>([]);
-  const [departments, setDepartments] = useState<APIDivision[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  // API base URL from environment variable
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+  // Function to get headers with authorization
+  const getHeaders = () => {
+    const token = session?.token || Cookies.get('token'); // Changed to Cookies.get
+    return {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    };
+  };
+
+  // Ensure users is always an array
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch SOPs with better error handling
-        let sopsResponse;
+    if (usersData && Array.isArray(usersData)) {
+      setUsers(usersData);
+    } else if (usersData) {
+      // If usersData is not an array but exists, convert it to array
+      setUsers([usersData]);
+    } else {
+      setUsers([]);
+    }
+  }, [usersData]);
+
+  // Fetch user profile and set default view based on user role
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
         try {
-          sopsResponse = await fetch('https://und-mention-inspiration-fast.trycloudflare.com/sops', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+          const headers = getHeaders();
+          const response = await fetch(`${API_URL}/profiles/by-user/${user.id}`, {
+            headers
           });
-        } catch (fetchError) {
-          console.error('Network error fetching SOPs:', fetchError);
-          throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Failed to connect to server'}`);
-        }
-        
-        if (!sopsResponse.ok) {
-          throw new Error(`HTTP ${sopsResponse.status}: ${sopsResponse.statusText}`);
-        }
-        
-        const sopsData = await sopsResponse.json();
-        console.log('SOPs API response:', sopsData);
-        
-        // Handle the actual API response structure
-        const sops = sopsData.data || sopsData;
-        setApiSOPs(Array.isArray(sops) ? sops : []);
-        
-        // Fetch Categories with better error handling
-        let categoriesResponse;
-        try {
-          categoriesResponse = await fetch('https://und-mention-inspiration-fast.trycloudflare.com/categories', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-        } catch (fetchError) {
-          console.error('Network error fetching categories:', fetchError);
-          throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Failed to connect to server'}`);
-        }
-        
-        if (!categoriesResponse.ok) {
-          throw new Error(`HTTP ${categoriesResponse.status}: ${categoriesResponse.statusText}`);
-        }
-        
-        const categoriesData = await categoriesResponse.json();
-        console.log('Categories API response:', categoriesData);
-        
-        // Handle the actual API response structure
-        const cats = categoriesData.data || categoriesData;
-        const categoriesArray = Array.isArray(cats) ? cats : [];
-        setCategories(categoriesArray);
-        
-        // Try to fetch Divisions (with fallback)
-        try {
-          const divisionsResponse = await fetch('https://und-mention-inspiration-fast.trycloudflare.com/divisions');
-          if (divisionsResponse.ok) {
-            const divisionsData = await divisionsResponse.json();
-            const divs = divisionsData.data || divisionsData;
-            const divisionsArray = Array.isArray(divs) ? divs : [];
-            setDepartments(divisionsArray);
-          } else {
-            // If divisions API fails, create a fallback
-            setDepartments([
-              { id: 1, division_name: 'IT', description: 'Information Technology' },
-              { id: 2, division_name: 'HR', description: 'Human Resources' },
-              { id: 3, division_name: 'Finance', description: 'Finance & Accounting' }
-            ]);
+          
+          if (!response.ok) throw new Error('Failed to fetch profile');
+          
+          const data = await response.json();
+          if (data) {
+            setUserProfile(data);
+            // Set default view based on user role
+            setShowSCE(data.role === 'SCE');
           }
-        } catch (divisionsError) {
-          console.warn('Divisions API failed, using fallback:', divisionsError);
-          // Fallback divisions
-          setDepartments([
-            { id: 1, division_name: 'IT', description: 'Information Technology' },
-            { id: 2, division_name: 'HR', description: 'Human Resources' },
-            { id: 3, division_name: 'Finance', description: 'Finance & Accounting' }
-          ]);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load user profile.",
+          });
         }
-        
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        setError(`Gagal mengambil data dari server: ${errorMessage}`);
-        setApiSOPs([]);
-        setCategories([]);
-        setDepartments([]);
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchUserProfile();
+  }, [user, API_URL, toast, session]);
 
-  // Helper function to get category name by ID
-  const getCategoryName = (categoryId: number | undefined) => {
-    if (!categoryId) return 'Uncategorized';
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.category_name : 'Uncategorized';
-  };
+  // Convert projects tasks to UI tasks
+  useEffect(() => {
+    if (projects) {
+      const allTasks = projects.flatMap(project => 
+        project.tasks.map(task => mapDbTaskToUITask(task, project.name))
+      );
+      setTasks(allTasks);
+    }
+  }, [projects]);
 
-  // Helper function to get division name by ID
-  const getDivisionName = (divisionId: number | undefined) => {
-    if (!divisionId) return 'Unknown';
-    const division = departments.find(div => div.id === divisionId);
-    return division ? division.division_name : 'Unknown';
-  };
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    try {
+      const headers = getHeaders();
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status }),
+      });
 
-  const getStatusBadge = (status: string) => {
-    if (!status) return <Badge variant="secondary">Unknown</Badge>;
-    
-    switch (status.toLowerCase()) {
-      case 'pending':
-      case 'pending review':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">Pending Review</Badge>;
-      case 'verified':
-      case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">Verified</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
-      case 'revision':
-      case 'revisi':
-        return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">Revisi</Badge>;
-      case 'draft':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">Draft</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      if (!response.ok) throw new Error('Failed to update task status');
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: status as any } : task
+      ));
+
+      toast({
+        title: "Task updated",
+        description: "Task status has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update task status.",
+      });
     }
   };
 
-  const toggleCategory = (category: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
-    } else {
-      newExpanded.add(category);
+  const saveTaskDetails = async (taskId: string, deliverable: string, bottleneck: string, progress?: string) => {
+    try {
+      const headers = getHeaders();
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ 
+          deliverable: deliverable || null,
+          bottleneck: bottleneck || null
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save task details');
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, deliverable, bottleneck, progress } : task
+      ));
+
+      toast({
+        title: "Task details saved",
+        description: "Task details have been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving task details:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save task details.",
+      });
     }
-    setExpandedCategories(newExpanded);
   };
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-    setSelectedDepartment('all');
+  const updateMiddayStatus = (taskId: string, status: "on-track" | "at-risk" | "blocked") => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, middayStatus: status } : task
+    ));
   };
 
-  // Filter SOPs based on search and filters
-  const filteredSOPs = apiSOPs.filter(sop => {
-    const categoryName = getCategoryName(sop.category_id);
-    const divisionName = getDivisionName(sop.division_id);
-    
-    const matchesSearch = searchTerm === '' || 
-      sop.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sop.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sop.tags && typeof sop.tags === 'string' && sop.tags.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || categoryName === selectedCategory;
-    const matchesDepartment = selectedDepartment === 'all' || divisionName === selectedDepartment;
-    
-    return matchesSearch && matchesCategory && matchesDepartment;
-  });
+  const updateEODOutcome = (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, notes?: string) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, eodOutcome: outcome, deliverable, notes } : task
+    ));
+  };
 
-  // Group SOPs by category
-  const groupedSOPs = filteredSOPs.reduce((acc, sop) => {
-    const category = getCategoryName(sop.category_id);
-    if (!acc[category]) {
-      acc[category] = [];
+  const updateCarryoverProgress = async (taskId: string, progress: string) => {
+    try {
+      const headers = getHeaders();
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ progress }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save progress');
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, progress } : task
+      ));
+
+      toast({
+        title: "Progress saved",
+        description: "Task progress has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save progress.",
+      });
     }
-    acc[category].push(sop);
-    return acc;
-  }, {} as Record<string, APISOP[]>);
+  };
 
-  if (loading) {
+  const markContinueTomorrow = async (taskId: string) => {
+    console.log('markContinueTomorrow called in Index with taskId:', taskId);
+    try {
+      // Update database
+      console.log('Updating database for task:', taskId);
+      const headers = getHeaders();
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ continue_tomorrow: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Database update error:', errorData);
+        throw new Error(errorData.message || 'Failed to update task');
+      }
+
+      console.log('Database updated successfully');
+
+      // Update local state
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, continueTomorrow: true } : task
+      ));
+
+      toast({
+        title: "Task marked to continue tomorrow",
+        description: "Task will be carried over to tomorrow.",
+      });
+    } catch (error) {
+      console.error('Error marking task to continue tomorrow:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to mark task to continue tomorrow.",
+      });
+    }
+  };
+
+  const toggleTaskDetails = (taskId: string) => {
+    setExpandedTaskDetails(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const addTask = async (newTask: Omit<Task, 'id'>) => {
+    try {
+      const headers = getHeaders();
+      
+      // Find existing project or create new one
+      let projectId = null;
+      const existingProject = projects.find(p => p.name === newTask.project);
+      
+      if (existingProject) {
+        projectId = existingProject.id;
+      } else {
+        // Create new project
+        const response = await fetch(`${API_URL}/projects`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            name: newTask.project,
+            description: newTask.goal || `Project for ${newTask.project}`,
+            user_id: user?.id
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to create project');
+        
+        const newProject = await response.json();
+        projectId = newProject.id;
+      }
+
+      // Create task
+      const effortValue = newTask.effort === "S" ? 1 : newTask.effort === "M" ? 2 : 3;
+      const priorityValue = newTask.priority === "High" ? "high" : newTask.priority === "Med" ? "medium" : "low";
+
+      const response = await fetch(`${API_URL}/tasks`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: newTask.title,
+          project_id: projectId,
+          effort: effortValue,
+          priority: priorityValue,
+          status: newTask.status || 'todo',
+          difficulty_level: newTask.difficulty || 'moderate',
+          due_date: new Date().toISOString().split('T')[0]
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create task');
+      
+      const newDbTask = await response.json();
+
+      // Add to local state
+      const uiTask: Task = {
+        ...newTask,
+        id: newDbTask.id
+      };
+      setTasks(prev => [...prev, uiTask]);
+
+      // Refetch to ensure consistency
+      refetch();
+
+      toast({
+        title: "Task added",
+        description: "New task has been created successfully.",
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add task.",
+      });
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await deleteDbTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      toast({
+        title: "Task deleted",
+        description: "Task has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete task.",
+      });
+    }
+  };
+
+  const getCurrentTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return { text: "Good morning", icon: Sun };
+    if (hour < 17) return { text: "Good afternoon", icon: Sun };
+    return { text: "Good evening", icon: Sun };
+  };
+
+  const greeting = getCurrentTimeGreeting();
+  const GreetingIcon = greeting.icon;
+
+  if (loading || usersLoading) {
     return (
-      <AppLayout>
-        <div className="p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading...</p>
-            </div>
-          </div>
+      <Layout>
+        <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+          <div className="text-lg text-muted-foreground">Loading tasks and users...</div>
         </div>
-      </AppLayout>
+      </Layout>
     );
   }
 
-  if (error) {
-    return (
-      <AppLayout>
-        <div className="p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-destructive mb-2">Error</h3>
-              <p className="text-muted-foreground mb-4">{error}</p>
-              <div className="space-y-2">
-                <Button onClick={() => window.location.reload()}>
-                  Coba Lagi
+  // Filter users based on role
+  const filteredUsers = users.filter(user => user.role === (showSCE ? 'SCE' : 'SE'));
+
+  return (
+    <Layout>
+      <div className="min-h-screen bg-gradient-subtle">
+        {/* Header */}
+        <header className="bg-card border-b border-border shadow-card">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GreetingIcon className="w-6 h-6 text-primary" />
+                <h1 className="text-xl font-semibold text-foreground">
+                  {greeting.text}, {userProfile?.full_name || 'User'} 🌤️
+                </h1>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className="text-sm">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Week 35
+                </Badge>
+                <Badge className="bg-gradient-success text-success-foreground">
+                  <Flame className="w-3 h-3 mr-1" />
+                  Streak: {streak} days
+                </Badge>
+                <Button size="sm" className="bg-gradient-primary">
+                  Quick Add [⌘K]
                 </Button>
-                <div className="text-xs text-muted-foreground">
-                  <p>Jika masalah berlanjut, cek:</p>
-                  <ul className="list-disc list-inside mt-1">
-                    <li>Koneksi internet</li>
-                    <li>Status server backend</li>
-                    <li>URL API yang benar</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
-        </div>
-      </AppLayout>
-    );
-  }
+        </header>
 
-  return (
-    <AppLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Daftar SOP</h1>
-            <p className="text-muted-foreground mt-2">
-              Kelola dan lihat semua Standard Operating Procedures
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Total: {apiSOPs.length} SOP
-            </span>
-          </div>
-        </div>
+        <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+          {/* Pending Tasks */}
+          <PendingTasks onTaskReassigned={refetch} />
 
-        {/* Search and Filters */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Cari SOP berdasarkan judul, deskripsi, atau tag..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+          {/* Weekly Goals */}
+          <WeeklyGoals />
+
+          {/* Capacity */}
+          <CapacityBar />
+
+          {/* Users and Tasks Combined */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Team & Tasks</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="user-type-switch" className="text-sm font-medium">
+                  {showSCE ? 'SCE' : 'SE'} Users
+                </Label>
+                <Switch
+                  id="user-type-switch"
+                  checked={showSCE}
+                  onCheckedChange={setShowSCE}
                 />
               </div>
             </div>
-            
-            <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Kategori</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category.id} value={category.category_name}>
-                      {category.category_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Departemen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Departemen</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.division_name}>
-                      {dept.division_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" onClick={resetFilters}>
-                Reset
-              </Button>
-            </div>
-          </div>
-        </div>
 
-        {/* SOP List */}
-        <div className="space-y-4">
-          {Object.entries(groupedSOPs).map(([category, sops]) => (
-            <Collapsible
-              key={category}
-              open={expandedCategories.has(category)}
-              onOpenChange={() => toggleCategory(category)}
-            >
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between p-4 h-auto bg-gray-50 hover:bg-gray-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-left">{category}</span>
-                    <Badge variant="secondary" className="ml-2">
-                      {sops.length} SOP
-                    </Badge>
-                  </div>
-                  {expandedCategories.has(category) ? (
-                    <ChevronDown className="h-5 w-5" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 p-4 bg-gray-50/50 rounded-lg">
-                  {sops.map((sop) => (
-                    <Card key={sop.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <CardTitle className="text-lg line-clamp-2">{sop.title || 'No Title'}</CardTitle>
-                          {getStatusBadge(sop.status)}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {sop.description || 'No description available'}
-                        </p>
-                        
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="font-medium">Kategori:</span>
-                          <span>{getCategoryName(sop.category_id)}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="font-medium">Departemen:</span>
-                          <span>{getDivisionName(sop.division_id)}</span>
-                        </div>
-                        
-                        {sop.status_reason && (
-                          <div className="text-xs text-muted-foreground bg-gray-100 p-2 rounded">
-                            <span className="font-medium">Alasan:</span> {sop.status_reason}
-                          </div>
-                        )}
-                        
-                        {sop.tags && (
-                          <div className="flex flex-wrap gap-1">
-                            {Array.isArray(sop.tags) ? (
-                              sop.tags.map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {String(tag)}
-                                </Badge>
-                              ))
-                            ) : typeof sop.tags === 'string' ? (
-                              sop.tags.split(',').map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {tag.trim()}
-                                </Badge>
-                              ))
-                            ) : null}
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                          <span>Dibuat: {sop.created_at ? new Date(sop.created_at).toLocaleDateString('id-ID') : 'Unknown'}</span>
-                          <span>Update: {sop.updated_at ? new Date(sop.updated_at).toLocaleDateString('id-ID') : 'Unknown'}</span>
-                        </div>
-                        
-                        <Link href={`/sop/${sop.id}`}>
-                          <Button className="w-full" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            Lihat Detail
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-primary">
+                  {filteredUsers.length}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ))}
-        </div>
+                <div className="text-sm text-muted-foreground">
+                  Total {showSCE ? 'SCE' : 'SE'} Users
+                </div>
+              </Card>
+              
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-success">
+                  {filteredUsers.filter(user => 
+                    new Date(user.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                  ).length}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  New This Week
+                </div>
+              </Card>
+              
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-warning">
+                  {tasks.length}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Total Tasks
+                </div>
+              </Card>
+            </div>
 
-        {Object.keys(groupedSOPs).length === 0 && (
-          <div className="text-center py-12">
-            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Tidak ada SOP ditemukan</h3>
-            <p className="text-muted-foreground">
-              Coba ubah filter pencarian atau kategori yang dipilih.
-            </p>
+            {/* User Cards with Tasks */}
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map(user => {
+                // Find projects for this user (matching by user ID)
+                const userProjects = projects.filter(project => {
+                  return project.user_id === user.id;
+                });
+                
+                // Get all tasks for this user's projects
+                const userTasks = userProjects.flatMap(project => 
+                  project.tasks.map(task => mapDbTaskToUITask(task, project.name))
+                );
+
+                return (
+                  <Card key={user.id} className="p-6 bg-gradient-subtle border border-border shadow-card">
+                    {/* User Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-foreground">
+                            {user.full_name || user.email}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {user.role} {/* Backend uses 'role' but UI label is 'User Type' */}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {userTasks.length} tasks
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* User Tasks */}
+                    <div className="space-y-3">
+                      {userTasks.length > 0 ? (
+                        <>
+                          <h4 className="text-sm font-medium text-foreground">Tasks:</h4>
+                          <div className="space-y-2">
+                            {userTasks.map((task) => (
+                              <div key={task.id} className="p-3 bg-background rounded border border-border">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-foreground text-sm">
+                                      {task.title}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {task.project} • {task.priority} Priority • {task.effort} Effort
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant={
+                                        task.status === 'completed' ? 'default' : 
+                                        task.status === 'in-progress' ? 'secondary' : 'outline'
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {task.status}
+                                    </Badge>
+                                    {task.continueTomorrow && (
+                                      <Badge variant="outline" className="text-xs text-warning">
+                                        Continue Tomorrow
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          No tasks found for this user
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card className="p-6 text-center">
+                <div className="text-muted-foreground">
+                  No {showSCE ? 'SCE' : 'SE'} users found
+                </div>
+              </Card>
+            )}
           </div>
-        )}
+        </main>
       </div>
-    </AppLayout>
+    </Layout>
   );
-} 
+}

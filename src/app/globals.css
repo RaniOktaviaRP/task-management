@@ -8,98 +8,95 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Peaceful Dark Theme with Soft Eye-Friendly Colors */
+    --background: 222 15 8;           /* Deep navy-blue #0F1419 */
+    --foreground: 210 20 85;          /* Soft light blue-gray #D1D9E6 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 222 15 10;                /* Slightly lighter navy #131A21 */
+    --card-foreground: 210 20 85;     /* Soft light blue-gray */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 222 15 10;             /* Dark navy */
+    --popover-foreground: 210 20 85;  /* Soft light blue-gray */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Calm Turquoise */
+    --primary: 180 60 55;             /* Soft turquoise #4CBFAD */
+    --primary-foreground: 222 15 8;   /* Dark background for contrast */
+    --primary-glow: 180 60 70;        /* Lighter turquoise glow */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Warm Gray */
+    --secondary: 220 15 15;           /* Warm dark gray #232831 */
+    --secondary-foreground: 210 20 75;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: Darker Warm Gray */
+    --muted: 220 15 12;               /* Darker warm gray #1C212A */
+    --muted-foreground: 210 15 65;    /* Muted light gray */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent: Soft Teal */
+    --accent: 175 50 50;              /* Calming teal #40B5A8 */
+    --accent-foreground: 222 15 8;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Light Blue Accent - Peaceful */
+    --light-blue: 200 40 50;          /* Peaceful blue #4D7A99 */
+    --light-blue-foreground: 210 20 85;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Mint Green Accent - Soft */
+    --mint: 150 30 50;                /* Soft mint #59B380 */
+    --mint-foreground: 222 15 8;
 
-    --radius: 0.5rem;
+    /* Success: Gentle Green */
+    --success: 145 45 50;             /* Gentle green #4CAF7A */
+    --success-foreground: 222 15 8;
 
-    --sidebar-background: 0 0% 98%;
+    /* Warning: Warm Amber */
+    --warning: 35 80 60;              /* Warm amber #E6A855 */
+    --warning-foreground: 222 15 8;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Destructive: Soft Red */
+    --destructive: 5 65 55;           /* Soft red #D67A6B */
+    --destructive-foreground: 222 15 8;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Borders & Inputs */
+    --border: 220 15 20;              /* Subtle border #2A3038 */
+    --input: 222 15 12;               /* Dark input background */
+    --ring: 180 60 55;                /* Turquoise focus ring */
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Peaceful Dark Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(180 60% 55%), hsl(180 60% 70%));
+    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%), hsl(220 15% 12%));
+    --gradient-success: linear-gradient(135deg, hsl(145 45% 50%), hsl(150 30% 50%));
+    --gradient-subtle: linear-gradient(180deg, hsl(222 15% 8%), hsl(222 15% 10%));
+    --gradient-accent: linear-gradient(135deg, hsl(175 50% 50%), hsl(175 50% 60%));
+    --gradient-warm: linear-gradient(135deg, hsl(180 60% 55%), hsl(175 55% 55%));
+    
+    /* Soft Dark Shadows */
+    --shadow-soft: 0 1px 3px 0 hsl(222 30% 5% / 0.3), 0 1px 2px 0 hsl(222 30% 5% / 0.15);
+    --shadow-glow: 0 0 20px hsl(180 60% 55% / 0.15);
+    --shadow-card: 0 4px 6px -1px hsl(222 30% 5% / 0.3), 0 2px 4px -1px hsl(222 30% 5% / 0.15);
+    --shadow-elegant: 0 10px 15px -3px hsl(222 30% 5% / 0.3), 0 4px 6px -2px hsl(222 30% 5% / 0.1);
+    --shadow-float: 0 20px 25px -5px hsl(222 30% 5% / 0.3), 0 10px 10px -5px hsl(222 30% 5% / 0.1);
+    
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --radius: 0.75rem;                /* Refined rounded corners */
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar Peaceful Dark Theme */
+    --sidebar-background: 222 15 10;  /* Slightly lighter navy */
+    --sidebar-foreground: 210 20 85;  /* Soft light blue-gray */
+    --sidebar-primary: 180 60 55;     /* Turquoise accent */
+    --sidebar-primary-foreground: 222 15 8;
+    --sidebar-accent: 220 15 15;      /* Warm dark gray */
+    --sidebar-accent-foreground: 210 20 75;
+    --sidebar-border: 220 15 20;      /* Subtle border */
+    --sidebar-ring: 180 60 55;        /* Turquoise focus */
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
