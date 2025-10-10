@@ -1,249 +1,771 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Sun, Flame, Clock3, Calendar, AlertTriangle, Users } from "lucide-react";
+import { TaskCard, type Task } from "@/components/TaskCard";
+import { WeeklyGoals } from "@/components/WeeklyGoals";
+import { CapacityBar } from "@/components/CapacityBar";
+import { QuickAdd } from "@/components/QuickAdd";
+import { PendingTasks } from "@/components/PendingTasks";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import Cookies from 'js-cookie';
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import Layout from "@/components/Layout";
+import Cookies from "js-cookie";
+import { TaskGroups } from "@/components/TaskGroups";
 
-const Auth = () => {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [fullName, setFullName] = useState<string>("");
-  const [role, setRole] = useState<"SE" | "SCE">("SE");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const router = useRouter();
-  const { signIn: authSignIn } = useAuth();
+// Types
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  created_at: string;
+}
 
-  // --- SIGN IN FUNCTION ---
-  const signIn = async (email: string, password: string, role: "SE" | "SCE") => {
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role }),
-    });
-  
-    const data = await res.json();
-    console.log("Login response:", data);
-  
-    if (!res.ok) {
-      throw new Error(data.message || "Sign in failed");
-    }
-  
-    // Simpan token di cookies dengan nama yang sesuai backend
-    Cookies.set('token', data.data.token, {
-      expires: 1/24, // 1 jam dalam hari
-      secure: true,
-      sameSite: 'strict'
-    });
-  };
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  user_id: string;
+  tasks: Task[];
+}
 
-  // --- HANDLE SIGN IN ---
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+// Helper function untuk extract data dari response API
+const extractDataFromResponse = (response: any): any[] => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+  if (response && Array.isArray(response.data)) {
+    return response.data;
+  }
+  if (response && response.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
+  if (response && typeof response.data === 'object' && !Array.isArray(response.data)) {
+    return [response.data];
+  }
+  console.warn("Unable to extract array data from response:", response);
+  return [];
+};
 
-    try {
-      await signIn(email, password, role);
-
-      toast({
-        title: "Welcome back!",
-        description: "You've been successfully signed in.",
-      });
-
-      // Gunakan replace untuk menghindari kembali ke halaman login
-      router.replace('/users');
-    } catch (error: any) {
-      toast({
-        title: "Sign in failed",
-        description: error.message || "An error occurred during sign in",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- HANDLE SIGN UP ---
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: fullName,
-          role,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Sign up failed");
-      }
-
-      // otomatis sign in setelah register
-      await signIn(email, password, role);
-
-      toast({
-        title: "Account created!",
-        description: "You are now signed in.",
-      });
-
-      router.push("/"); // redirect ke dashboard
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Sign up failed",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
+// Helper function untuk validasi user
+const isValidUser = (user: any): user is User => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-
-            {/* SIGN IN FORM */}
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEmail(e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-usertype">User Type</Label>
-                  <Select value={role} onValueChange={v => setRole(v as "SE" | "SCE")}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SE">Sarana Engineer (SE)</SelectItem>
-                      <SelectItem value="SCE">Sarana Camp Engineer (SCE)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setPassword(e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            {/* SIGN UP FORM */}
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEmail(e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-fullname">Full Name</Label>
-                  <Input
-                    id="signup-fullname"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={fullName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setFullName(e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-usertype">User Type</Label>
-                  <Select value={role} onValueChange={v => setRole(v as "SE" | "SCE")}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SE">Software Engineering (SE)</SelectItem>
-                      <SelectItem value="SCE">Software Computer Engineering (SCE)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setPassword(e.target.value)
-                    }
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full text-foreground" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+    user &&
+    typeof user === 'object' &&
+    user.id &&
+    typeof user.email === 'string'
   );
 };
 
-export default Auth;
+// Helper function to map database task to UI task
+const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
+  return {
+    id: dbTask.id,
+    title: dbTask.title,
+    project: projectName,
+    goal: dbTask.goal || "",
+    effort: dbTask.effort === 1 ? "S" : dbTask.effort === 2 ? "M" : "L",
+    priority: dbTask.priority === "high" ? "High" : dbTask.priority === "medium" ? "Med" : "Low",
+    status: dbTask.status,
+    difficulty: dbTask.difficulty_level,
+    deliverable: dbTask.deliverable,
+    bottleneck: dbTask.bottleneck,
+    progress: dbTask.progress || "",
+    continueTomorrow: dbTask.continue_tomorrow || false
+  };
+};
 
+// API service functions
+const apiService = {
+  getHeaders() {
+    const token = Cookies.get('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  },
 
+  async fetchUsers(): Promise<User[]> {
+    try {
+      console.log("Fetching users from:", `${process.env.NEXT_PUBLIC_API_URL}/users`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        headers: this.getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log("Users API raw response:", responseData);
+      
+      const usersData = extractDataFromResponse(responseData);
+      console.log("Extracted users data:", usersData);
+      
+      const validUsers = usersData.filter(isValidUser);
+      console.log("Valid users:", validUsers);
+      
+      return validUsers;
+    } catch (error) {
+      console.error('Error in fetchUsers:', error);
+      throw error;
+    }
+  },
+
+  async fetchUserProfile(userId: string): Promise<any> {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profiles/by-user/${userId}`, {
+        headers: this.getHeaders()
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      throw error;
+    }
+  },
+
+  async fetchProjects(): Promise<Project[]> {
+    try {
+      console.log("Fetching projects from:", `${process.env.NEXT_PUBLIC_API_URL}/projects`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
+        headers: this.getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log("Projects API raw response:", responseData);
+      
+      const projectsData = extractDataFromResponse(responseData);
+      console.log("Extracted projects data:", projectsData);
+    
+      const projectsWithTasks = await Promise.all(
+        projectsData.map(async (project: any) => {
+          try {
+            console.log(`Fetching tasks for project ${project.id}:`, `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`);
+            const tasksResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`,
+              { headers: this.getHeaders() }
+            );
+            
+            if (tasksResponse.ok) {
+              const tasksData = await tasksResponse.json();
+              const tasks = extractDataFromResponse(tasksData);
+              console.log(`Tasks for project ${project.id}:`, tasks);
+              return { ...project, tasks };
+            }
+            console.warn(`Failed to fetch tasks for project ${project.id}`);
+            return { ...project, tasks: [] };
+          } catch (error) {
+            console.error(`Error fetching tasks for project ${project.id}:`, error);
+            return { ...project, tasks: [] };
+          }
+        })
+      );
+      
+      console.log("Final projects with tasks:", projectsWithTasks);
+      return projectsWithTasks;
+    } catch (error) {
+      console.error('Error in fetchProjects:', error);
+      throw error;
+    }
+  },
+
+  async updateTaskStatus(taskId: string, status: string): Promise<void> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update task status');
+    }
+  },
+
+  async updateTaskDetails(taskId: string, updates: any): Promise<void> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update task details');
+    }
+  },
+
+  async createProject(projectData: any): Promise<Project> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(projectData)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create project');
+    }
+    
+    return response.json();
+  },
+
+  async createTask(taskData: any): Promise<any> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(taskData)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create task');
+    }
+    
+    return response.json();
+  },
+
+  async deleteTask(taskId: string): Promise<void> {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders()
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete task');
+    }
+  }
+};
+
+// Custom hooks yang disesuaikan
+const useProjectsCustom = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.fetchProjects();
+      setProjects(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error in useProjectsCustom:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch projects');
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await apiService.deleteTask(taskId);
+      await fetchProjects();
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  return { projects, loading, error, deleteTask, refetch: fetchProjects };
+};
+
+const useUsersCustom = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.fetchUsers();
+      
+      const normalizedUsers = data.map(user => {
+        const userRole = (user.role || user.role || 'SE').toUpperCase().trim();
+        
+        return {
+          ...user,
+          role: userRole,
+          full_name: user.full_name || user.email,
+          email: user.email || '',
+          created_at: user.created_at || new Date().toISOString()
+        };
+      });
+      
+      console.log('Normalized users:', normalizedUsers);
+      setUsers(normalizedUsers);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch users');
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  return { users, loading, error, refetch: fetchUsers };
+};
+
+export default function Index() {
+  const { user } = useAuth();
+  const isGuest = !user;
+  const { projects: projectsData, loading: projectsLoading, deleteTask: deleteDbTask, refetch } = useProjectsCustom();
+  const { users: usersData, loading: usersLoading, error: usersError } = useUsersCustom();
+  const { toast } = useToast();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [streak, setStreak] = useState(3);
+  const [showSCE, setShowSCE] = useState(false);
+
+  // Fetch user profile
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user?.id) {
+        try {
+          const profile = await apiService.fetchUserProfile(user.id);
+          setUserProfile(profile);
+          if (profile) {
+            setShowSCE(profile.role === 'SCE');
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setUserProfile(null);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  // Convert projects tasks to UI tasks
+  useEffect(() => {
+    if (projectsData && Array.isArray(projectsData)) {
+      const allTasks = projectsData.flatMap(project => 
+        (project.tasks || []).map(task => mapDbTaskToUITask(task, project.name))
+      );
+      setTasks(allTasks);
+    }
+  }, [projectsData]);
+
+  // Debug: Log users data
+  useEffect(() => {
+    console.log("All users data:", usersData);
+    console.log("Users loading:", usersLoading);
+    console.log("Users error:", usersError);
+    
+    if (usersData.length > 0) {
+      const roleCount = usersData.reduce((acc, user) => {
+        const role = user.role || 'Unknown';
+        acc[role] = (acc[role] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log("Role distribution:", roleCount);
+    }
+  }, [usersData, usersLoading, usersError]);
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    try {
+      await apiService.updateTaskStatus(taskId, status);
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, status: status as any } : task
+      ));
+
+      toast({
+        title: "Task updated",
+        description: "Task status has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update task status.",
+      });
+    }
+  };
+
+  const saveTaskDetails = async (taskId: string, deliverable: string, bottleneck: string, progress?: string) => {
+    try {
+      const updates: any = {};
+      if (deliverable) updates.deliverable = deliverable;
+      if (bottleneck) updates.bottleneck = bottleneck;
+      if (progress) updates.progress = progress;
+
+      await apiService.updateTaskDetails(taskId, updates);
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, deliverable, bottleneck, progress } : task
+      ));
+
+      toast({
+        title: "Task details saved",
+        description: "Task details have been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving task details:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save task details.",
+      });
+    }
+  };
+
+  const updateMiddayStatus = (taskId: string, status: "on-track" | "at-risk" | "blocked") => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, middayStatus: status } : task
+    ));
+  };
+
+  const updateEODOutcome = (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, notes?: string) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, eodOutcome: outcome, deliverable, notes } : task
+    ));
+  };
+
+  const updateCarryoverProgress = async (taskId: string, progress: string) => {
+    try {
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, progress } : task
+      ));
+
+      toast({
+        title: "Progress saved",
+        description: "Task progress has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save progress.",
+      });
+    }
+  };
+
+  const markContinueTomorrow = async (taskId: string, progress: string) => {
+    try {
+      await apiService.updateTaskDetails(taskId, { 
+        continue_tomorrow: true,
+        progress: progress 
+      });
+
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { ...task, continueTomorrow: true, progress } : task
+      ));
+
+      toast({
+        title: "Task marked to continue tomorrow",
+        description: "Task will be carried over to tomorrow.",
+      });
+    } catch (error) {
+      console.error('Error marking task to continue tomorrow:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to mark task to continue tomorrow.",
+      });
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await deleteDbTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      toast({
+        title: "Task deleted",
+        description: "Task has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete task.",
+      });
+    }
+  };
+
+  const getCurrentTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return { text: "Good morning", icon: Sun };
+    if (hour < 17) return { text: "Good afternoon", icon: Sun };
+    return { text: "Good evening", icon: Sun };
+  };
+
+  const greeting = getCurrentTimeGreeting();
+  const GreetingIcon = greeting.icon;
+
+  // Filter users berdasarkan role
+  const filteredUsers = usersData.filter(user => {
+    const userRole = (user.role || '').toUpperCase().trim();
+    const filterRole = (showSCE ? 'SCE' : 'SE').toUpperCase().trim();
+    const matches = userRole === filterRole;
+    
+    console.log(`Filtering user:`, {
+      email: user.email,
+      role: user.role,
+      normalized_role: userRole,
+      filter_role: filterRole,
+      matches: matches
+    });
+    
+    return matches;
+  });
+
+  // Calculate new users this week
+  const newThisWeek = filteredUsers.filter(user => {
+    try {
+      const userDate = new Date(user.created_at);
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      return userDate > weekAgo;
+    } catch {
+      return false;
+    }
+  }).length;
+
+  // Calculate user tasks
+  const userTasksMap: { [key: string]: Task[] } = {};
+  
+  filteredUsers.forEach(user => {
+    try {
+      const safeProjectsData = Array.isArray(projectsData) ? projectsData : [];
+      const userProjects = safeProjectsData.filter(project => 
+        project.user_id === user.id
+      );
+      const userTasks = userProjects.flatMap(project => 
+        (project.tasks || []).map(task => mapDbTaskToUITask(task, project.name))
+      );
+      userTasksMap[user.id] = userTasks;
+    } catch (error) {
+      console.error(`Error processing tasks for user ${user.id}:`, error);
+      userTasksMap[user.id] = [];
+    }
+  });
+
+  const totalTasks = tasks.length;
+
+  if (projectsLoading || usersLoading) {
+    return (
+      <Layout> 
+        <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+          <div className="text-lg text-muted-foreground">Loading tasks</div>
+        </div>
+      </Layout> 
+    );
+  }
+
+  return (
+    <Layout> 
+      <div className="min-h-screen bg-gradient-subtle">
+        {/* Header */}
+        <header className="bg-card border-b border-border shadow-card">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GreetingIcon className="w-6 h-6 text-primary" />
+                {user ? (
+                  <div className="flex flex-col">
+                    <h1 className="text-xl font-semibold text-foreground">
+                      {greeting.text}, {userProfile?.full_name || user.full_name || user.email} 🌤️
+                    </h1>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col">
+                      <h1 className="text-xl font-semibold text-foreground">
+                        {greeting.text}, Guest 🌤️
+                      </h1>
+                    </div>
+                    <Button 
+                      variant="default" 
+                      className="bg-gradient-primary text-primary-foreground" 
+                      onClick={() => window.location.href = '/auth'}
+                    >
+                      Sign In
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {user && (
+                <div className="flex items-center gap-4">
+                  <Badge variant="outline" className="text-sm">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), 0, 1).getDay()) / 7)}
+                  </Badge>
+                  <Badge className="bg-gradient-success text-success-foreground">
+                    <Flame className="w-3 h-3 mr-1" />
+                    Streak: {streak} days
+                  </Badge>
+                  <Button variant="default" size="sm" className="bg-gradient-primary text-primary-foreground">
+                    Quick Add [⌘K]
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+          {/* Pending Tasks */}
+          {user && <PendingTasks onTaskReassigned={refetch} />}
+
+          {/* Weekly Goals */}
+          <WeeklyGoals />
+
+          {/* Capacity */}
+          <CapacityBar />
+
+      
+          {/* Team & Tasks */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Team & Tasks</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="role-switch" className="text-sm font-medium">
+                  {showSCE ? 'SCE' : 'SE'} Users
+                </Label>
+                <Switch
+                  id="role-switch"
+                  checked={showSCE}
+                  onCheckedChange={setShowSCE}
+                />
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-primary">
+                  {filteredUsers.length}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Total {showSCE ? 'SCE' : 'SE'} Users
+                </div>
+              </Card>
+                  
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-success">
+                  {newThisWeek}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  New This Week
+                </div>
+              </Card>
+              
+              <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
+                <div className="text-2xl font-bold text-warning">
+                  {totalTasks}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Total Tasks
+                </div>
+              </Card>
+            </div>
+
+            {/* User Cards with Tasks menggunakan TaskGroups */}
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map(user => {
+                const userTasks = userTasksMap[user.id] || [];
+
+                return (
+                  <Card key={user.id} className="p-6 bg-gradient-subtle border border-border shadow-card">
+                    {/* User Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-foreground">
+                            {user.full_name || user.email}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email} 
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {user.role || 'User'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {userTasks.length} tasks
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* User Tasks menggunakan TaskGroups */}
+                    <div className="space-y-3">
+                      {userTasks.length > 0 ? (
+                        <>
+                          <h4 className="text-sm font-medium text-foreground">Tasks:</h4>
+                          <TaskGroups
+                            tasks={userTasks}
+                            isReadOnly={true}
+                            isGuest={isGuest}
+                            onStatusChange={updateTaskStatus}
+                            onMiddayUpdate={updateMiddayStatus}
+                            onEODUpdate={updateEODOutcome}
+                            onCarryoverUpdate={updateCarryoverProgress}
+                            onSaveDetails={saveTaskDetails}
+                            onDelete={deleteTask}
+                            onContinueTomorrow={markContinueTomorrow}
+                            showGrouping={false}
+                            compactView={true}
+                          />
+                        </>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          No tasks found for this user
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card className="p-6 text-center">
+                <div className="text-muted-foreground mb-4">
+                  No {showSCE ? 'SCE' : 'SE'} users found. 
+                </div>
+              </Card>
+            )}
+          </div>
+        </main>
+      </div>
+    </Layout>
+  );
+}

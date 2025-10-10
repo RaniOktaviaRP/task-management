@@ -1,18 +1,23 @@
 ﻿import { useState } from "react";
-import { Check, Clock, AlertTriangle, X, Upload, Link2, Trash2 } from "lucide-react";
+import { Check, Clock, AlertTriangle, X, Upload, Link2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
 export interface Task {
   id: string;
   title: string;
   project: string;
+  client?: string;
+  category?: string;
   goal: string;
   effort: "S" | "M" | "L";
   priority: "Low" | "Med" | "High";
   status: "todo" | "in-progress" | "completed" | "blocked";
   difficulty?: string;
+  taskMode?: "midday" | "eod" | "carryover";
   middayStatus?: "on-track" | "at-risk" | "blocked";
   eodOutcome?: "done" | "partial" | "not-started";
   deliverable?: string;
@@ -20,6 +25,7 @@ export interface Task {
   progress?: string;
   continueTomorrow?: boolean;
 }
+
 interface TaskCardProps {
   task: Task;
   isMiddayMode?: boolean;
@@ -27,6 +33,7 @@ interface TaskCardProps {
   isCarryoverMode?: boolean;
   isReadOnly?: boolean;
   showDetails?: boolean;
+  isGuest?: boolean;
   onStatusChange?: (taskId: string, status: string) => void;
   onMiddayUpdate?: (taskId: string, status: "on-track" | "at-risk" | "blocked") => void;
   onEODUpdate?: (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, bottleneck?: string) => void;
@@ -36,6 +43,7 @@ interface TaskCardProps {
   onToggleDetails?: () => void;
   onContinueTomorrow?: (taskId: string, progress: string) => void;
 }
+
 export function TaskCard({
   task,
   isMiddayMode = false,
@@ -43,6 +51,7 @@ export function TaskCard({
   isCarryoverMode = false,
   isReadOnly = false,
   showDetails = false,
+  isGuest = false,
   onStatusChange,
   onMiddayUpdate,
   onEODUpdate,
@@ -56,6 +65,8 @@ export function TaskCard({
   const [bottleneck, setBottleneck] = useState(task.bottleneck || "");
   const [progress, setProgress] = useState(task.progress || "");
   const [showProgressField, setShowProgressField] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const effortMap = {
     S: {
       label: "30m",
@@ -70,261 +81,317 @@ export function TaskCard({
       color: "bg-destructive/10 text-destructive"
     }
   };
+
   const priorityColors = {
     Low: "bg-muted text-muted-foreground",
     Med: "bg-warning/10 text-warning",
     High: "bg-destructive/10 text-destructive"
   };
-  return <Card className="p-4 bg-card border border-border shadow-card hover:shadow-soft transition-all duration-200">
+
+  // Show expanded content when in special modes or when expanded/toggled
+  const shouldShowExpandedContent = isMiddayMode || isEODMode || isCarryoverMode || isExpanded || showDetails;
+
+  return (
+    <Card className="p-4 bg-card border border-border shadow-card hover:shadow-soft transition-all duration-200">
       <div className="flex items-start gap-3">
-        {/* Status Selector */}
-        <div className="flex flex-col gap-1">
-          <button 
-            onClick={() => onStatusChange?.(task.id, "todo")} 
-            className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
-              task.status === "todo" ? "bg-muted border-muted-foreground" : "border-border hover:border-primary"
-            )}
-            title="Todo"
-          >
-            {task.status === "todo" && <div className="w-2 h-2 rounded-full bg-muted-foreground" />}
-          </button>
-          <button 
-            onClick={() => onStatusChange?.(task.id, "in-progress")} 
-            className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
-              task.status === "in-progress" ? "bg-primary border-primary text-primary-foreground" : "border-border hover:border-primary"
-            )}
-            title="In Progress"
-          >
-            {task.status === "in-progress" && <Clock className="w-3 h-3" />}
-          </button>
-          <button 
-            onClick={() => onStatusChange?.(task.id, "completed")} 
-            className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
-              task.status === "completed" ? "bg-gradient-success border-success text-success-foreground" : "border-border hover:border-primary"
-            )}
-            title="Completed"
-          >
-            {task.status === "completed" && <Check className="w-3 h-3" />}
-          </button>
-        </div>
+        {/* Status Selector - Only show for authenticated users */}
+        {!isGuest && (
+          <div className="flex flex-col gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => onStatusChange?.(task.id, "todo")} 
+                  className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
+                    task.status === "todo" ? "bg-muted border-muted-foreground" : "border-border hover:border-primary"
+                  )}
+                >
+                  {task.status === "todo" && <div className="w-2 h-2 rounded-full bg-muted-foreground" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>📝 Todo - Mark task as not started</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => onStatusChange?.(task.id, "in-progress")} 
+                  className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
+                    task.status === "in-progress" ? "bg-primary border-primary text-primary-foreground" : "border-border hover:border-primary"
+                  )}
+                >
+                  {task.status === "in-progress" && <Clock className="w-3 h-3" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>⏰ In Progress - Currently working on this task</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => onStatusChange?.(task.id, "completed")} 
+                  className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
+                    task.status === "completed" ? "bg-gradient-success border-success text-success-foreground" : "border-border hover:border-primary"
+                  )}
+                >
+                  {task.status === "completed" && <Check className="w-3 h-3" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>✅ Completed - Task has been finished</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         <div className="flex-1 space-y-3">
-          {/* Task Header */}
+          {/* Task Header - Always Visible */}
           <div>
-            <h3 className={cn("font-medium text-foreground", task.status === "completed" && "line-through text-muted-foreground")}>
-              {task.title}
-            </h3>
-            
-            {/* Chips */}
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="outline" className="text-xs">
-                ðŸ“‹ {task.project}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                ðŸŽ¯ {task.goal}
-              </Badge>
-              {task.continueTomorrow && (
-                <Badge className="bg-warning/20 text-warning text-xs">
-                  ðŸ“… Continue Tomorrow
-                </Badge>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className={cn("font-medium text-foreground", task.status === "completed" && "line-through text-muted-foreground")}>
+                  {task.title}
+                </h3>
+                
+                {/* Chips */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    📋 {task.project}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    🎯 {task.goal}
+                  </Badge>
+                  {task.taskMode && (
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary">
+                      {task.taskMode === "midday" ? "⏰ MD" : task.taskMode === "eod" ? "🏁 EOD" : "📅 CO"}
+                    </Badge>
+                  )}
+                  {task.difficulty && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                      💪 {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
+                    </Badge>
+                  )}
+                  {task.continueTomorrow && (
+                    <Badge className="bg-warning/20 text-warning text-xs">
+                      📅 Continue Tomorrow
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              {/* Expand/Collapse Button - Only show in overview mode for authenticated users */}
+              {!isMiddayMode && !isEODMode && !isCarryoverMode && !isGuest && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 ml-2"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
               )}
             </div>
           </div>
 
-          {/* Midday Checkpoint */}
-          {isMiddayMode && <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              <h4 className="text-sm font-medium text-foreground">Midday Check âœ¨</h4>
-              <div className="flex gap-2 flex-wrap">
-                {["on-track", "at-risk", "blocked"].map(status => <Button key={status} variant={task.middayStatus === status ? "default" : "outline"} size="sm" onClick={() => onMiddayUpdate?.(task.id, status as any)} className={cn("text-xs", status === "on-track" && task.middayStatus === status && "bg-gradient-success", status === "at-risk" && task.middayStatus === status && "bg-warning text-warning-foreground", status === "blocked" && task.middayStatus === status && "bg-destructive text-destructive-foreground")}>
-                    {status === "on-track" && "â¦¿ On track"}
-                    {status === "at-risk" && "âš  At risk"}
-                    {status === "blocked" && "ðŸš« Blocked"}
-                  </Button>)}
-                {onContinueTomorrow && !task.continueTomorrow && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Continue Tomorrow button clicked for task:', task.id);
-                      setShowProgressField(true);
-                    }}
-                    className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
-                  >
-                    ðŸ“… Continue Tomorrow
-                  </Button>
-                )}
-                {/* Show Edit Progress button if task is already marked to continue tomorrow */}
-                {onContinueTomorrow && task.continueTomorrow && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Edit Progress clicked for task:', task.id);
-                      setShowProgressField(true);
-                    }}
-                    className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
-                  >
-                    âœï¸ Edit Progress
-                  </Button>
-                )}
-              </div>
-            </div>}
+          {/* Expanded Content - Only show when expanded or in special modes */}
+          {shouldShowExpandedContent && (
+            <div className="space-y-3 border-t border-border pt-3">
+              {/* Midday Checkpoint - Only show for authenticated users */}
+              {isMiddayMode && !isGuest && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                  <h4 className="text-sm font-medium text-foreground">Midday Check ✨</h4>
+                  <div className="flex gap-2 flex-wrap">
+                    {onContinueTomorrow && !task.continueTomorrow && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Continue Tomorrow button clicked for task:', task.id);
+                          setShowProgressField(true);
+                        }}
+                        className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
+                      >
+                        📅 Continue Tomorrow
+                      </Button>
+                    )}
+                    {/* Show Edit Progress button if task is already marked to continue tomorrow */}
+                    {onContinueTomorrow && task.continueTomorrow && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Edit Progress clicked for task:', task.id);
+                          setShowProgressField(true);
+                        }}
+                        className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
+                      >
+                        ✏️ Edit Progress
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* EOD Review */}
-          {isEODMode && <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-              <h4 className="text-sm font-medium text-foreground">Victory lap ðŸ</h4>
-              
-              {/* Outcome buttons */}
-              <div className="flex gap-2 flex-wrap">
-                {["done", "partial", "not-started"].map(outcome => <Button key={outcome} variant={task.eodOutcome === outcome ? "default" : "outline"} size="sm" onClick={() => onEODUpdate?.(task.id, outcome as any, deliverable, bottleneck)} className={cn("text-xs", outcome === "done" && task.eodOutcome === outcome && "bg-gradient-success", outcome === "partial" && task.eodOutcome === outcome && "bg-warning text-warning-foreground", outcome === "not-started" && task.eodOutcome === outcome && "bg-destructive text-destructive-foreground")}>
-                    {outcome === "done" && "âœ… Done"}
-                    {outcome === "partial" && "âš¡ Partial"}
-                    {outcome === "not-started" && "âŒ Not started"}
-                  </Button>)}
-                {onContinueTomorrow && !task.continueTomorrow && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Continue Tomorrow button clicked for task (EOD):', task.id);
-                      setShowProgressField(true);
-                    }}
-                    className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
-                  >
-                    ðŸ“… Continue Tomorrow
-                  </Button>
-                )}
-                {/* Show Edit Progress button if task is already marked to continue tomorrow */}
-                {onContinueTomorrow && task.continueTomorrow && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log('Edit Progress clicked for task (EOD):', task.id);
-                      setShowProgressField(true);
-                    }}
-                    className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
-                  >
-                    âœï¸ Edit Progress
-                  </Button>
-                )}
-              </div>
-            </div>}
+              {/* EOD Review - Only show for authenticated users */}
+              {isEODMode && !isGuest && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Victory lap 🏁</h4>
+                  
+                  <div className="flex gap-2 flex-wrap">
+                    {onContinueTomorrow && !task.continueTomorrow && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Continue Tomorrow button clicked for task (EOD):', task.id);
+                          setShowProgressField(true);
+                        }}
+                        className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
+                      >
+                        📅 Continue Tomorrow
+                      </Button>
+                    )}
+                    {/* Show Edit Progress button if task is already marked to continue tomorrow */}
+                    {onContinueTomorrow && task.continueTomorrow && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Edit Progress clicked for task (EOD):', task.id);
+                          setShowProgressField(true);
+                        }}
+                        className="text-xs bg-warning/10 text-warning border-warning/20 hover:bg-warning/20"
+                      >
+                        ✏️ Edit Progress
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* Carryover Mode */}
-          {isCarryoverMode && <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-              <h4 className="text-sm font-medium text-foreground">Continue Tomorrow ðŸ“…</h4>
-              <div>
-                <label className="text-sm font-medium text-foreground">Progress & Obstacles</label>
-                <textarea 
-                  placeholder="What obstacles prevented completion? What progress was made?" 
-                  value={progress} 
-                  onChange={e => setProgress(e.target.value)} 
-                  className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
-                  rows={3} 
-                />
-                <Button 
-                  onClick={() => onCarryoverUpdate?.(task.id, progress)}
-                  size="sm"
-                  className="w-full mt-2"
-                >
-                  Save Progress
-                </Button>
-              </div>
-            </div>}
-
-           {/* Continue Tomorrow Progress Field */}
-           {showProgressField && (isMiddayMode || isEODMode) && (
-             <div className="bg-warning/10 rounded-lg p-3 space-y-3">
-               <h4 className="text-sm font-medium text-foreground">Continue Tomorrow Progress ðŸ“…</h4>
-               <div>
-                 <label className="text-sm font-medium text-foreground">What will you continue tomorrow?</label>
-                 <textarea 
-                   placeholder="Describe what you'll continue working on tomorrow..." 
-                   value={progress} 
-                   onChange={e => setProgress(e.target.value)} 
-                   className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
-                   rows={3} 
-                 />
-                 <Button 
-                   onClick={() => {
-                     console.log('Save Continue Tomorrow clicked', { taskId: task.id, progress });
-                     onContinueTomorrow?.(task.id, progress);
-                     setShowProgressField(false);
-                   }}
-                   size="sm"
-                   className="w-full mt-2"
-                 >
-                   Save & Continue Tomorrow
-                 </Button>
-               </div>
-             </div>
-           )}
-
-           {/* Details Section - Only show when showDetails is true or not in overview mode */}
-          {(showDetails || isMiddayMode || isEODMode || isCarryoverMode) && (
-            <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground">Deliverable</label>
-                  {isReadOnly ? (
-                    <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
-                      {task.deliverable || "No deliverable specified"}
-                    </p>
-                  ) : (
+              {/* Carryover Mode - Only show for authenticated users */}
+              {isCarryoverMode && !isGuest && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Continue Tomorrow 📅</h4>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Progress & Obstacles</label>
                     <textarea 
-                      placeholder="What was delivered for this task?" 
-                      value={deliverable} 
-                      onChange={e => setDeliverable(e.target.value)} 
+                      placeholder="What obstacles prevented completion? What progress was made?" 
+                      value={progress} 
+                      onChange={e => setProgress(e.target.value)} 
                       className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
-                      rows={2} 
+                      rows={3} 
                     />
+                    <Button 
+                      onClick={() => onCarryoverUpdate?.(task.id, progress)}
+                      size="sm"
+                      className="w-full mt-2"
+                    >
+                      Save Progress
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Continue Tomorrow Progress Field - Only show for authenticated users */}
+              {showProgressField && (isMiddayMode || isEODMode) && !isGuest && (
+                <div className="bg-warning/10 rounded-lg p-3 space-y-3">
+                  <h4 className="text-sm font-medium text-foreground">Continue Tomorrow Progress 📅</h4>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">What will you continue tomorrow?</label>
+                    <textarea 
+                      placeholder="Describe what you'll continue working on tomorrow..." 
+                      value={progress} 
+                      onChange={e => setProgress(e.target.value)} 
+                      className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
+                      rows={3} 
+                    />
+                    <Button 
+                      onClick={() => {
+                        console.log('Save Continue Tomorrow clicked', { taskId: task.id, progress });
+                        onContinueTomorrow?.(task.id, progress);
+                        setShowProgressField(false);
+                      }}
+                      size="sm"
+                      className="w-full mt-2"
+                    >
+                      Save & Continue Tomorrow
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Details Section */}
+              <div className="bg-muted/50 rounded-lg p-3 space-y-3">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Deliverable</label>
+                    {isReadOnly || isGuest ? (
+                      <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
+                        {task.deliverable || "No deliverable specified"}
+                      </p>
+                    ) : (
+                      <textarea 
+                        placeholder="What was delivered for this task?" 
+                        value={deliverable} 
+                        onChange={e => setDeliverable(e.target.value)} 
+                        className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
+                        rows={2} 
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Bottleneck</label>
+                    {isReadOnly || isGuest ? (
+                      <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
+                        {task.bottleneck || "No bottlenecks reported"}
+                      </p>
+                    ) : (
+                      <textarea 
+                        placeholder="What blocked or slowed you down?" 
+                        value={bottleneck} 
+                        onChange={e => setBottleneck(e.target.value)} 
+                        className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
+                        rows={2} 
+                      />
+                    )}
+                  </div>
+                  {task.progress && (
+                    <div>
+                      <label className="text-sm font-medium text-foreground">
+                        {task.continueTomorrow ? "Continue Tomorrow Progress" : "Progress Notes"}
+                      </label>
+                      <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
+                        {task.progress}
+                      </p>
+                    </div>
+                  )}
+                  {!isReadOnly && !isGuest && onSaveDetails && (
+                    <Button 
+                      onClick={() => {
+                        console.log('Save button clicked', { taskId: task.id, deliverable, bottleneck, progress });
+                        onSaveDetails(task.id, deliverable, bottleneck, progress);
+                      }}
+                      size="sm"
+                      className="w-full"
+                    >
+                      Save Details
+                    </Button>
                   )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Bottleneck</label>
-                  {isReadOnly ? (
-                    <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
-                      {task.bottleneck || "No bottlenecks reported"}
-                    </p>
-                  ) : (
-                    <textarea 
-                      placeholder="What blocked or slowed you down?" 
-                      value={bottleneck} 
-                      onChange={e => setBottleneck(e.target.value)} 
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" 
-                      rows={2} 
-                    />
-                  )}
-                </div>
-                 {task.progress && (
-                   <div>
-                     <label className="text-sm font-medium text-foreground">
-                       {task.continueTomorrow ? "Continue Tomorrow Progress" : "Progress Notes"}
-                     </label>
-                     <p className="w-full mt-1 px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[40px]">
-                       {task.progress}
-                     </p>
-                   </div>
-                 )}
-                {!isReadOnly && onSaveDetails && (
-                  <Button 
-                    onClick={() => {
-                      console.log('Save button clicked', { taskId: task.id, deliverable, bottleneck, progress });
-                      onSaveDetails(task.id, deliverable, bottleneck, progress);
-                    }}
-                    size="sm"
-                    className="w-full"
-                  >
-                    Save Details
-                  </Button>
-                )}
               </div>
             </div>
           )}
 
-          {/* View Details Toggle for Overview Mode */}
-          {!isMiddayMode && !isEODMode && !isCarryoverMode && !showDetails && onToggleDetails && (
+          {/* View Details Toggle for Overview Mode - Only show for authenticated users when not expanded */}
+          {!isMiddayMode && !isEODMode && !isCarryoverMode && !isExpanded && !isGuest && onToggleDetails && (
             <Button 
               onClick={onToggleDetails}
               variant="outline"
@@ -338,7 +405,7 @@ export function TaskCard({
 
         {/* Actions and Status indicator */}
         <div className="flex flex-col items-center gap-2">
-          {onDelete && !isReadOnly && (
+          {onDelete && !isReadOnly && !isGuest && (
             <button 
               onClick={() => onDelete(task.id)}
               className="p-1 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
@@ -350,6 +417,6 @@ export function TaskCard({
           <div className={cn("w-2 h-2 rounded-full", task.status === "completed" && "bg-success", task.status === "in-progress" && "bg-primary animate-pulse-glow", task.status === "blocked" && "bg-destructive", task.status === "todo" && "bg-muted-foreground")} />
         </div>
       </div>
-    </Card>;
+    </Card>
+  );
 }
-

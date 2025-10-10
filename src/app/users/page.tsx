@@ -712,7 +712,7 @@ const UserManagement = () => {
                         </Select>
                       </div>
                       <div className="flex gap-2">
-                        <Button type="submit" disabled={formLoading} size="sm">
+                        <Button type="submit" disabled={formLoading} size="sm" variant="default">
                           {formLoading ? "Saving..." : "Save Changes"}
                         </Button>
                         <Button type="button" variant="outline" size="sm" onClick={cancelEdit}>
