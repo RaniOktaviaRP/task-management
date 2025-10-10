@@ -1,14 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import Cookies from 'js-cookie';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import Cookies from "js-cookie";
 
 interface AuthFormProps {
   onAuthSuccess?: () => void;
@@ -31,31 +43,31 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 // Function to get headers with authorization
 const getHeaders = (includeAuth: boolean = false): HeadersInit => {
   const headers: HeadersInit = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   };
-  
+
   if (includeAuth) {
-    const token = Cookies.get('token');
+    const token = Cookies.get("token");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
   }
-  
+
   return headers;
 };
 
 const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'SE' | 'SCE'>('SE');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState<"SE" | "SCE">("SE");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = Cookies.get('token');
+    const token = Cookies.get("token");
     if (token) {
       checkAuthStatus();
     }
@@ -63,12 +75,12 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
 
   const checkAuthStatus = async () => {
     try {
-      const token = Cookies.get('token');
+      const token = Cookies.get("token");
       if (!token) return;
 
       // Verify token by fetching current user profile
       const response = await fetch(`${API_BASE_URL}/users/current`, {
-        headers: getHeaders(true)
+        headers: getHeaders(true),
       });
 
       if (response.ok) {
@@ -79,11 +91,11 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         }
       } else {
         // Token invalid, clear it
-        Cookies.remove('token');
+        Cookies.remove("token");
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
-      Cookies.remove('token');
+      console.error("Auth check failed:", error);
+      Cookies.remove("token");
     }
   };
 
@@ -92,28 +104,42 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setLoading(true);
 
     try {
+      console.log("Signup attempt:", { email, fullName, role, API_BASE_URL });
+
+      const requestData = {
+        email,
+        password,
+        full_name: fullName,
+        role: role,
+      };
+
+      console.log("Request data:", requestData);
+
       const response = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
+        method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: fullName,
-          role: role
-        })
+        body: JSON.stringify(requestData),
       });
 
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
       const data = await response.json();
+      console.log("Response data:", data);
 
       if (!response.ok) {
-        if (response.status === 409 || data.message?.includes('already exists')) {
+        if (
+          response.status === 409 ||
+          data.message?.includes("already exists")
+        ) {
           toast({
             title: "Account exists",
-            description: "This email is already registered. Please sign in instead.",
+            description:
+              "This email is already registered. Please sign in instead.",
             variant: "destructive",
           });
         } else {
-          throw new Error(data.message || 'Registration failed');
+          throw new Error(data.message || "Registration failed");
         }
       } else {
         toast({
@@ -121,7 +147,9 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           description: "Your account has been created. Please sign in.",
         });
         // Switch to sign in tab after successful registration
-        const tabsList = document.querySelector('[data-value="signin"]') as HTMLElement;
+        const tabsList = document.querySelector(
+          '[data-value="signin"]'
+        ) as HTMLElement;
         if (tabsList) {
           tabsList.click();
         }
@@ -143,12 +171,12 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
+        method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({
           email,
-          password
-        })
+          password,
+        }),
       });
 
       const data: AuthResponse = await response.json();
@@ -157,16 +185,17 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         if (response.status === 401) {
           toast({
             title: "Login failed",
-            description: "Invalid email or password. Please check your credentials.",
+            description:
+              "Invalid email or password. Please check your credentials.",
             variant: "destructive",
           });
         } else {
-          throw new Error(data as any || 'Login failed');
+          throw new Error((data as any) || "Login failed");
         }
       } else {
         // Store token in cookies
-        Cookies.set('token', data.token, { expires: 7 }); // Expires in 7 days
-        
+        Cookies.set("token", data.token, { expires: 7 }); // Expires in 7 days
+
         // Store user data
         setUser(data.user);
 
@@ -196,43 +225,46 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
   const ensureUserProfile = async (userId: string, token: string) => {
     try {
       // Check if profile exists
-      const profileResponse = await fetch(`${API_BASE_URL}/profiles/by-user/${userId}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+      const profileResponse = await fetch(
+        `${API_BASE_URL}/profiles/by-user/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
 
       if (profileResponse.status === 404) {
         // Profile doesn't exist, create one
         await fetch(`${API_BASE_URL}/profiles`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             user_id: userId,
-            full_name: fullName || user?.full_name || email.split('@')[0],
-            role: role
-          })
+            full_name: fullName || user?.full_name || email.split("@")[0],
+            role: role,
+          }),
         });
       }
     } catch (error) {
-      console.error('Failed to ensure user profile:', error);
+      console.error("Failed to ensure user profile:", error);
     }
   };
 
   const handleLogout = async () => {
     try {
       await fetch(`${API_BASE_URL}/logout`, {
-        method: 'POST',
-        headers: getHeaders(true)
+        method: "POST",
+        headers: getHeaders(true),
       });
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     } finally {
-      Cookies.remove('token');
+      Cookies.remove("token");
       setUser(null);
       toast({
         title: "Signed out",
@@ -253,12 +285,8 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Role: {user.role}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Email: {user.email}
-            </p>
+            <p className="text-sm text-muted-foreground">Role: {user.role}</p>
+            <p className="text-sm text-muted-foreground">Email: {user.email}</p>
           </div>
           <Button onClick={handleLogout} className="w-full" variant="outline">
             Sign Out
@@ -282,7 +310,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="signin">
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
@@ -312,7 +340,7 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               </Button>
             </form>
           </TabsContent>
-          
+
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
@@ -339,13 +367,18 @@ const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-role">Role</Label>
-                <Select value={role} onValueChange={(value: 'SE' | 'SCE') => setRole(value)}>
+                <Select
+                  value={role}
+                  onValueChange={(value: "SE" | "SCE") => setRole(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="SE">Sarana Engineer (SE)</SelectItem>
-                    <SelectItem value="SCE">Sarana Camp Engineer (SCE)</SelectItem>
+                    <SelectItem value="SCE">
+                      Sarana Camp Engineer (SCE)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

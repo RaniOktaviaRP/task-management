@@ -4,9 +4,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,8 +39,8 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      console.log('🔐 Starting sign in process...', { email, role });
-      
+      console.log("🔐 Starting sign in process...", { email, role });
+
       // Gunakan useAuth signIn, tapi kita perlu handle role secara manual
       // Karena useAuth mungkin tidak menerima role parameter
       await authSignIn(email, password);
@@ -39,7 +51,7 @@ const Auth = () => {
       });
 
       // Gunakan replace untuk menghindari kembali ke halaman login
-      router.replace('/');
+      router.replace("/");
     } catch (error: any) {
       toast({
         title: "Sign in failed",
@@ -57,8 +69,9 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-      
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
       const res = await fetch(`${API_URL}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,13 +142,18 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-usertype">User Type</Label>
-                  <Select value={role} onValueChange={v => setRole(v as "SE" | "SCE")}>
+                  <Select
+                    value={role}
+                    onValueChange={(v) => setRole(v as "SE" | "SCE")}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select user type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="SE">Sarana Engineer (SE)</SelectItem>
-                      <SelectItem value="SCE">Sarana Camp Engineer (SCE)</SelectItem>
+                      <SelectItem value="SCE">
+                        Sarana Camp Engineer (SCE)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -189,13 +207,18 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-usertype">User Type</Label>
-                  <Select value={role} onValueChange={v => setRole(v as "SE" | "SCE")}>
+                  <Select
+                    value={role}
+                    onValueChange={(v) => setRole(v as "SE" | "SCE")}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select user type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SE">Software Engineering (SE)</SelectItem>
-                      <SelectItem value="SCE">Software Computer Engineering (SCE)</SelectItem>
+                      <SelectItem value="SE">Sarana Engineer (SE)</SelectItem>
+                      <SelectItem value="SCE">
+                        Sarana Camp Engineer (SCE)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -213,7 +236,11 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full text-foreground" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full text-foreground"
+                  disabled={loading}
+                >
                   {loading ? "Creating account..." : "Sign Up"}
                 </Button>
               </form>

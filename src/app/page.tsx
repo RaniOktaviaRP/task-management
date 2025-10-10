@@ -1,6 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Sun, Flame, Clock3, Calendar, AlertTriangle, Users } from "lucide-react";
+import {
+  Sun,
+  Flame,
+  Clock3,
+  Calendar,
+  AlertTriangle,
+  Users,
+} from "lucide-react";
 import { TaskCard, type Task } from "@/components/TaskCard";
 import { WeeklyGoals } from "@/components/WeeklyGoals";
 import { CapacityBar } from "@/components/CapacityBar";
@@ -45,7 +52,11 @@ const extractDataFromResponse = (response: any): any[] => {
   if (response && response.data && Array.isArray(response.data.data)) {
     return response.data.data;
   }
-  if (response && typeof response.data === 'object' && !Array.isArray(response.data)) {
+  if (
+    response &&
+    typeof response.data === "object" &&
+    !Array.isArray(response.data)
+  ) {
     return [response.data];
   }
   console.warn("Unable to extract array data from response:", response);
@@ -56,113 +67,144 @@ const extractDataFromResponse = (response: any): any[] => {
 const isValidUser = (user: any): user is User => {
   return (
     user &&
-    typeof user === 'object' &&
+    typeof user === "object" &&
     user.id &&
-    typeof user.email === 'string'
+    typeof user.email === "string"
   );
 };
 
 // Helper function to map database task to UI task
 const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
+  // Add null safety check
+  if (!dbTask || !dbTask.id) {
+    throw new Error("Invalid task data: task or task.id is null/undefined");
+  }
+
   return {
     id: dbTask.id,
-    title: dbTask.title,
-    project: projectName,
+    title: dbTask.title || "Untitled Task",
+    project: projectName || "Unknown Project",
     goal: dbTask.goal || "",
     effort: dbTask.effort === 1 ? "S" : dbTask.effort === 2 ? "M" : "L",
-    priority: dbTask.priority === "high" ? "High" : dbTask.priority === "medium" ? "Med" : "Low",
-    status: dbTask.status,
-    difficulty: dbTask.difficulty_level,
-    deliverable: dbTask.deliverable,
-    bottleneck: dbTask.bottleneck,
+    priority:
+      dbTask.priority === "high"
+        ? "High"
+        : dbTask.priority === "medium"
+        ? "Med"
+        : "Low",
+    status: dbTask.status || "todo",
+    difficulty: dbTask.difficulty_level || "easy",
+    deliverable: dbTask.deliverable || "",
+    bottleneck: dbTask.bottleneck || "",
     progress: dbTask.progress || "",
-    continueTomorrow: dbTask.continue_tomorrow || false
+    continueTomorrow: dbTask.continue_tomorrow || false,
   };
 };
 
 // API service functions
 const apiService = {
   getHeaders() {
-    const token = Cookies.get('token');
+    const token = Cookies.get("token");
     return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     };
   },
 
   async fetchUsers(): Promise<User[]> {
     try {
-      console.log("Fetching users from:", `${process.env.NEXT_PUBLIC_API_URL}/users`);
+      console.log(
+        "Fetching users from:",
+        `${process.env.NEXT_PUBLIC_API_URL}/users`
+      );
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch users: ${response.status} ${response.statusText}`
+        );
       }
-      
+
       const responseData = await response.json();
       console.log("Users API raw response:", responseData);
-      
+
       const usersData = extractDataFromResponse(responseData);
       console.log("Extracted users data:", usersData);
-      
+
       const validUsers = usersData.filter(isValidUser);
       console.log("Valid users:", validUsers);
-      
+
       return validUsers;
     } catch (error) {
-      console.error('Error in fetchUsers:', error);
+      console.error("Error in fetchUsers:", error);
       throw error;
     }
   },
 
   async fetchUserProfile(userId: string): Promise<any> {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profiles/by-user/${userId}`, {
-        headers: this.getHeaders()
-      });
-      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/profiles/by-user/${userId}`,
+        {
+          headers: this.getHeaders(),
+        }
+      );
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
         }
-        throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch user profile: ${response.status} ${response.statusText}`
+        );
       }
-      
+
       return response.json();
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error("Error in fetchUserProfile:", error);
       throw error;
     }
   },
 
   async fetchProjects(): Promise<Project[]> {
     try {
-      console.log("Fetching projects from:", `${process.env.NEXT_PUBLIC_API_URL}/projects`);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
-        headers: this.getHeaders()
-      });
-      
+      console.log(
+        "Fetching projects from:",
+        `${process.env.NEXT_PUBLIC_API_URL}/projects`
+      );
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/projects`,
+        {
+          headers: this.getHeaders(),
+        }
+      );
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch projects: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch projects: ${response.status} ${response.statusText}`
+        );
       }
-      
+
       const responseData = await response.json();
       console.log("Projects API raw response:", responseData);
-      
+
       const projectsData = extractDataFromResponse(responseData);
       console.log("Extracted projects data:", projectsData);
-    
+
       const projectsWithTasks = await Promise.all(
         projectsData.map(async (project: any) => {
           try {
-            console.log(`Fetching tasks for project ${project.id}:`, `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`);
+            console.log(
+              `Fetching tasks for project ${project.id}:`,
+              `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`
+            );
             const tasksResponse = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`,
               { headers: this.getHeaders() }
             );
-            
+
             if (tasksResponse.ok) {
               const tasksData = await tasksResponse.json();
               const tasks = extractDataFromResponse(tasksData);
@@ -172,82 +214,97 @@ const apiService = {
             console.warn(`Failed to fetch tasks for project ${project.id}`);
             return { ...project, tasks: [] };
           } catch (error) {
-            console.error(`Error fetching tasks for project ${project.id}:`, error);
+            console.error(
+              `Error fetching tasks for project ${project.id}:`,
+              error
+            );
             return { ...project, tasks: [] };
           }
         })
       );
-      
+
       console.log("Final projects with tasks:", projectsWithTasks);
       return projectsWithTasks;
     } catch (error) {
-      console.error('Error in fetchProjects:', error);
+      console.error("Error in fetchProjects:", error);
       throw error;
     }
   },
 
   async updateTaskStatus(taskId: string, status: string): Promise<void> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status })
-    });
-    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ status }),
+      }
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to update task status');
+      throw new Error("Failed to update task status");
     }
   },
 
   async updateTaskDetails(taskId: string, updates: any): Promise<void> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(updates)
-    });
-    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify(updates),
+      }
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to update task details');
+      throw new Error("Failed to update task details");
     }
   },
 
   async createProject(projectData: any): Promise<Project> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(projectData)
-    });
-    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/projects`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(projectData),
+      }
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to create project');
+      throw new Error("Failed to create project");
     }
-    
+
     return response.json();
   },
 
   async createTask(taskData: any): Promise<any> {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
-      body: JSON.stringify(taskData)
+      body: JSON.stringify(taskData),
     });
-    
+
     if (!response.ok) {
-      throw new Error('Failed to create task');
+      throw new Error("Failed to create task");
     }
-    
+
     return response.json();
   },
 
   async deleteTask(taskId: string): Promise<void> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders()
-    });
-    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      }
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to delete task');
+      throw new Error("Failed to delete task");
     }
-  }
+  },
 };
 
 // Custom hooks yang disesuaikan
@@ -264,8 +321,8 @@ const useProjectsCustom = () => {
       setProjects(data);
       setError(null);
     } catch (err) {
-      console.error('Error in useProjectsCustom:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch projects');
+      console.error("Error in useProjectsCustom:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch projects");
       setProjects([]);
     } finally {
       setLoading(false);
@@ -298,25 +355,27 @@ const useUsersCustom = () => {
       setLoading(true);
       setError(null);
       const data = await apiService.fetchUsers();
-      
-      const normalizedUsers = data.map(user => {
-        const userRole = (user.role || user.role || 'SE').toUpperCase().trim();
-        
+
+      const normalizedUsers = data.map((user) => {
+        const userRole = (user.role || user.role || "SE").toUpperCase().trim();
+
         return {
           ...user,
           role: userRole,
           full_name: user.full_name || user.email,
-          email: user.email || '',
-          created_at: user.created_at || new Date().toISOString()
+          email: user.email || "",
+          created_at: user.created_at || new Date().toISOString(),
         };
       });
-      
-      console.log('Normalized users:', normalizedUsers);
+
+      console.log("Normalized users:", normalizedUsers);
       setUsers(normalizedUsers);
       setError(null);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch users');
+      console.error("Error fetching users:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to fetch users"
+      );
       setUsers([]);
     } finally {
       setLoading(false);
@@ -333,8 +392,17 @@ const useUsersCustom = () => {
 export default function Index() {
   const { user } = useAuth();
   const isGuest = !user;
-  const { projects: projectsData, loading: projectsLoading, deleteTask: deleteDbTask, refetch } = useProjectsCustom();
-  const { users: usersData, loading: usersLoading, error: usersError } = useUsersCustom();
+  const {
+    projects: projectsData,
+    loading: projectsLoading,
+    deleteTask: deleteDbTask,
+    refetch,
+  } = useProjectsCustom();
+  const {
+    users: usersData,
+    loading: usersLoading,
+    error: usersError,
+  } = useUsersCustom();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -349,10 +417,10 @@ export default function Index() {
           const profile = await apiService.fetchUserProfile(user.id);
           setUserProfile(profile);
           if (profile) {
-            setShowSCE(profile.role === 'SCE');
+            setShowSCE(profile.role === "SCE");
           }
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          console.error("Error fetching user profile:", error);
           setUserProfile(null);
         }
       }
@@ -364,9 +432,22 @@ export default function Index() {
   // Convert projects tasks to UI tasks
   useEffect(() => {
     if (projectsData && Array.isArray(projectsData)) {
-      const allTasks = projectsData.flatMap(project => 
-        (project.tasks || []).map(task => mapDbTaskToUITask(task, project.name))
-      );
+      const allTasks = projectsData.flatMap((project) => {
+        if (!project || !Array.isArray(project.tasks)) {
+          return [];
+        }
+        return project.tasks
+          .filter((task) => task && task.id) // Filter out null/invalid tasks
+          .map((task) => {
+            try {
+              return mapDbTaskToUITask(task, project.name);
+            } catch (error) {
+              console.error("Error mapping task:", error, task);
+              return null;
+            }
+          })
+          .filter(Boolean); // Remove null values
+      });
       setTasks(allTasks);
     }
   }, [projectsData]);
@@ -376,10 +457,10 @@ export default function Index() {
     console.log("All users data:", usersData);
     console.log("Users loading:", usersLoading);
     console.log("Users error:", usersError);
-    
+
     if (usersData.length > 0) {
       const roleCount = usersData.reduce((acc, user) => {
-        const role = user.role || 'Unknown';
+        const role = user.role || "Unknown";
         acc[role] = (acc[role] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -391,16 +472,18 @@ export default function Index() {
     try {
       await apiService.updateTaskStatus(taskId, status);
 
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, status: status as any } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, status: status as any } : task
+        )
+      );
 
       toast({
         title: "Task updated",
         description: "Task status has been updated successfully.",
       });
     } catch (error) {
-      console.error('Error updating task status:', error);
+      console.error("Error updating task status:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -409,7 +492,12 @@ export default function Index() {
     }
   };
 
-  const saveTaskDetails = async (taskId: string, deliverable: string, bottleneck: string, progress?: string) => {
+  const saveTaskDetails = async (
+    taskId: string,
+    deliverable: string,
+    bottleneck: string,
+    progress?: string
+  ) => {
     try {
       const updates: any = {};
       if (deliverable) updates.deliverable = deliverable;
@@ -418,16 +506,20 @@ export default function Index() {
 
       await apiService.updateTaskDetails(taskId, updates);
 
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, deliverable, bottleneck, progress } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? { ...task, deliverable, bottleneck, progress }
+            : task
+        )
+      );
 
       toast({
         title: "Task details saved",
         description: "Task details have been updated successfully.",
       });
     } catch (error) {
-      console.error('Error saving task details:', error);
+      console.error("Error saving task details:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -436,30 +528,44 @@ export default function Index() {
     }
   };
 
-  const updateMiddayStatus = (taskId: string, status: "on-track" | "at-risk" | "blocked") => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, middayStatus: status } : task
-    ));
+  const updateMiddayStatus = (
+    taskId: string,
+    status: "on-track" | "at-risk" | "blocked"
+  ) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId ? { ...task, middayStatus: status } : task
+      )
+    );
   };
 
-  const updateEODOutcome = (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, notes?: string) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, eodOutcome: outcome, deliverable, notes } : task
-    ));
+  const updateEODOutcome = (
+    taskId: string,
+    outcome: "done" | "partial" | "not-started",
+    deliverable?: string,
+    notes?: string
+  ) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, eodOutcome: outcome, deliverable, notes }
+          : task
+      )
+    );
   };
 
   const updateCarryoverProgress = async (taskId: string, progress: string) => {
     try {
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, progress } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) => (task.id === taskId ? { ...task, progress } : task))
+      );
 
       toast({
         title: "Progress saved",
         description: "Task progress has been updated successfully.",
       });
     } catch (error) {
-      console.error('Error saving progress:', error);
+      console.error("Error saving progress:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -470,21 +576,25 @@ export default function Index() {
 
   const markContinueTomorrow = async (taskId: string, progress: string) => {
     try {
-      await apiService.updateTaskDetails(taskId, { 
+      await apiService.updateTaskDetails(taskId, {
         continue_tomorrow: true,
-        progress: progress 
+        progress: progress,
       });
 
-      setTasks(prev => prev.map(task => 
-        task.id === taskId ? { ...task, continueTomorrow: true, progress } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? { ...task, continueTomorrow: true, progress }
+            : task
+        )
+      );
 
       toast({
         title: "Task marked to continue tomorrow",
         description: "Task will be carried over to tomorrow.",
       });
     } catch (error) {
-      console.error('Error marking task to continue tomorrow:', error);
+      console.error("Error marking task to continue tomorrow:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -496,14 +606,14 @@ export default function Index() {
   const deleteTask = async (taskId: string) => {
     try {
       await deleteDbTask(taskId);
-      setTasks(prev => prev.filter(task => task.id !== taskId));
-      
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+
       toast({
         title: "Task deleted",
         description: "Task has been deleted successfully.",
       });
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -523,24 +633,24 @@ export default function Index() {
   const GreetingIcon = greeting.icon;
 
   // Filter users berdasarkan role
-  const filteredUsers = usersData.filter(user => {
-    const userRole = (user.role || '').toUpperCase().trim();
-    const filterRole = (showSCE ? 'SCE' : 'SE').toUpperCase().trim();
+  const filteredUsers = usersData.filter((user) => {
+    const userRole = (user.role || "").toUpperCase().trim();
+    const filterRole = (showSCE ? "SCE" : "SE").toUpperCase().trim();
     const matches = userRole === filterRole;
-    
+
     console.log(`Filtering user:`, {
       email: user.email,
       role: user.role,
       normalized_role: userRole,
       filter_role: filterRole,
-      matches: matches
+      matches: matches,
     });
-    
+
     return matches;
   });
 
   // Calculate new users this week
-  const newThisWeek = filteredUsers.filter(user => {
+  const newThisWeek = filteredUsers.filter((user) => {
     try {
       const userDate = new Date(user.created_at);
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -552,16 +662,33 @@ export default function Index() {
 
   // Calculate user tasks
   const userTasksMap: { [key: string]: Task[] } = {};
-  
-  filteredUsers.forEach(user => {
+
+  filteredUsers.forEach((user) => {
     try {
       const safeProjectsData = Array.isArray(projectsData) ? projectsData : [];
-      const userProjects = safeProjectsData.filter(project => 
-        project.user_id === user.id
+      const userProjects = safeProjectsData.filter(
+        (project) => project && project.user_id === user.id
       );
-      const userTasks = userProjects.flatMap(project => 
-        (project.tasks || []).map(task => mapDbTaskToUITask(task, project.name))
-      );
+      const userTasks = userProjects.flatMap((project) => {
+        if (!project || !Array.isArray(project.tasks)) {
+          return [];
+        }
+        return project.tasks
+          .filter((task) => task && task.id) // Filter out null/invalid tasks
+          .map((task) => {
+            try {
+              return mapDbTaskToUITask(task, project.name);
+            } catch (error) {
+              console.error(
+                `Error mapping task for user ${user.id}:`,
+                error,
+                task
+              );
+              return null;
+            }
+          })
+          .filter(Boolean); // Remove null values
+      });
       userTasksMap[user.id] = userTasks;
     } catch (error) {
       console.error(`Error processing tasks for user ${user.id}:`, error);
@@ -573,16 +700,16 @@ export default function Index() {
 
   if (projectsLoading || usersLoading) {
     return (
-      <Layout> 
+      <Layout>
         <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
           <div className="text-lg text-muted-foreground">Loading tasks</div>
         </div>
-      </Layout> 
+      </Layout>
     );
   }
 
   return (
-    <Layout> 
+    <Layout>
       <div className="min-h-screen bg-gradient-subtle">
         {/* Header */}
         <header className="bg-card border-b border-border shadow-card">
@@ -593,7 +720,9 @@ export default function Index() {
                 {user ? (
                   <div className="flex flex-col">
                     <h1 className="text-xl font-semibold text-foreground">
-                      {greeting.text}, {userProfile?.full_name || user.full_name || user.email} 🌤️
+                      {greeting.text},{" "}
+                      {userProfile?.full_name || user.full_name || user.email}{" "}
+                      🌤️
                     </h1>
                   </div>
                 ) : (
@@ -603,28 +732,37 @@ export default function Index() {
                         {greeting.text}, Guest 🌤️
                       </h1>
                     </div>
-                    <Button 
-                      variant="default" 
-                      className="bg-gradient-primary text-primary-foreground" 
-                      onClick={() => window.location.href = '/auth'}
+                    <Button
+                      variant="default"
+                      className="bg-gradient-primary text-primary-foreground"
+                      onClick={() => (window.location.href = "/auth")}
                     >
                       Sign In
                     </Button>
                   </div>
                 )}
               </div>
-              
+
               {user && (
                 <div className="flex items-center gap-4">
                   <Badge variant="outline" className="text-sm">
                     <Calendar className="w-3 h-3 mr-1" />
-                    Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), 0, 1).getDay()) / 7)}
+                    Week{" "}
+                    {Math.ceil(
+                      (new Date().getDate() +
+                        new Date(new Date().getFullYear(), 0, 1).getDay()) /
+                        7
+                    )}
                   </Badge>
                   <Badge className="bg-gradient-success text-success-foreground">
                     <Flame className="w-3 h-3 mr-1" />
                     Streak: {streak} days
                   </Badge>
-                  <Button variant="default" size="sm" className="bg-gradient-primary text-primary-foreground">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-gradient-primary text-primary-foreground"
+                  >
                     Quick Add [⌘K]
                   </Button>
                 </div>
@@ -643,17 +781,18 @@ export default function Index() {
           {/* Capacity */}
           <CapacityBar />
 
-      
           {/* Team & Tasks */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Team & Tasks</h2>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Team & Tasks
+                </h2>
               </div>
               <div className="flex items-center gap-3">
                 <Label htmlFor="role-switch" className="text-sm font-medium">
-                  {showSCE ? 'SCE' : 'SE'} Users
+                  {showSCE ? "SCE" : "SE"} Users
                 </Label>
                 <Switch
                   id="role-switch"
@@ -670,10 +809,10 @@ export default function Index() {
                   {filteredUsers.length}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Total {showSCE ? 'SCE' : 'SE'} Users
+                  Total {showSCE ? "SCE" : "SE"} Users
                 </div>
               </Card>
-                  
+
               <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
                 <div className="text-2xl font-bold text-success">
                   {newThisWeek}
@@ -682,30 +821,32 @@ export default function Index() {
                   New This Week
                 </div>
               </Card>
-              
+
               <Card className="p-4 bg-gradient-subtle border border-border shadow-card">
                 <div className="text-2xl font-bold text-warning">
                   {totalTasks}
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Total Tasks
-                </div>
+                <div className="text-sm text-muted-foreground">Total Tasks</div>
               </Card>
             </div>
 
             {/* User Cards with Tasks menggunakan TaskGroups */}
             {filteredUsers.length > 0 ? (
-              filteredUsers.map(user => {
+              filteredUsers.map((user) => {
                 const userTasks = userTasksMap[user.id] || [];
 
                 return (
-                  <Card key={user.id} className="p-6 bg-gradient-subtle border border-border shadow-card">
+                  <Card
+                    key={user.id}
+                    className="p-6 bg-gradient-subtle border border-border shadow-card"
+                  >
                     {/* User Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-primary">
-                            {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                            {user.full_name?.charAt(0) ||
+                              user.email.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
@@ -713,13 +854,13 @@ export default function Index() {
                             {user.full_name || user.email}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {user.email} 
+                            {user.email}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">
-                          {user.role || 'User'}
+                          {user.role || "User"}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
                           {userTasks.length} tasks
@@ -731,7 +872,9 @@ export default function Index() {
                     <div className="space-y-3">
                       {userTasks.length > 0 ? (
                         <>
-                          <h4 className="text-sm font-medium text-foreground">Tasks:</h4>
+                          <h4 className="text-sm font-medium text-foreground">
+                            Tasks:
+                          </h4>
                           <TaskGroups
                             tasks={userTasks}
                             isReadOnly={true}
@@ -743,8 +886,6 @@ export default function Index() {
                             onSaveDetails={saveTaskDetails}
                             onDelete={deleteTask}
                             onContinueTomorrow={markContinueTomorrow}
-                            showGrouping={false}
-                            compactView={true}
                           />
                         </>
                       ) : (
@@ -759,7 +900,7 @@ export default function Index() {
             ) : (
               <Card className="p-6 text-center">
                 <div className="text-muted-foreground mb-4">
-                  No {showSCE ? 'SCE' : 'SE'} users found. 
+                  No {showSCE ? "SCE" : "SE"} users found.
                 </div>
               </Card>
             )}
