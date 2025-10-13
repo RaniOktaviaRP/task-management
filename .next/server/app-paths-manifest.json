@@ -1,6 +1,0 @@
-{
-  "/users/page": "app/users/page.js",
-  "/page": "app/page.js",
-  "/auth/page": "app/auth/page.js",
-  "/new-today/page": "app/new-today/page.js"
-}
