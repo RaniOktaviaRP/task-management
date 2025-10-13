@@ -102,10 +102,10 @@ export function TaskCard({
                 <button 
                   onClick={() => onStatusChange?.(task.id, "todo")} 
                   className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
-                    task.status === "todo" ? "bg-muted border-muted-foreground" : "border-border hover:border-primary"
+                    task.status === "todo" ? "bg-primary border-primary text-primary-foreground" : "border-border hover:border-primary"
                   )}
                 >
-                  {task.status === "todo" && <div className="w-2 h-2 rounded-full bg-muted-foreground" />}
+                  {task.status === "todo" && <div className="w-1 h-1 rounded-full bg-black" />}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -134,7 +134,7 @@ export function TaskCard({
                 <button 
                   onClick={() => onStatusChange?.(task.id, "completed")} 
                   className={cn("w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200", 
-                    task.status === "completed" ? "bg-gradient-success border-success text-success-foreground" : "border-border hover:border-primary"
+                    task.status === "completed" ? "bg-primary border-primary text-primary-foreground" : "border-border hover:border-primary"
                   )}
                 >
                   {task.status === "completed" && <Check className="w-3 h-3" />}
