@@ -30,9 +30,7 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [taskText, setTaskText] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("moderate");
-  const [selectedPriority, setSelectedPriority] = useState<"High" | "Med" | "Low">("Med");
   const [selectedProjectName, setSelectedProjectName] = useState("");
-  const [isNewProject, setIsNewProject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +102,7 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
         category: undefined,
         goal,
         effort,
-        priority: selectedPriority,
+        priority: "Med",
         status: "todo",
         difficulty: selectedDifficulty,
         taskMode: currentMode
@@ -116,9 +114,7 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
       // Reset form
       setTaskText("");
       setSelectedDifficulty("moderate");
-      setSelectedPriority("Med");
       setSelectedProjectName("");
-      setIsNewProject(false);
       setIsExpanded(false);
       
       toast({
@@ -187,80 +183,14 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
 
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">Project</Label>
-          <div className="space-y-2">
-            <Select 
-              value={isNewProject ? "new" : selectedProjectName} 
-              onValueChange={(value) => {
-                if (value === "new") {
-                  setIsNewProject(true);
-                  setSelectedProjectName("");
-                } else {
-                  setIsNewProject(false);
-                  setSelectedProjectName(value);
-                }
-              }}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger className="w-full bg-background border-border">
-                <SelectValue placeholder="Select project" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border shadow-lg z-50">
-                {projectNames.map((projectName) => (
-                  <SelectItem key={projectName} value={projectName}>
-                    {projectName}
-                  </SelectItem>
-                ))}
-                <SelectItem value="new">+ Create New Project</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {isNewProject && (
-              <Input
-                value={selectedProjectName}
-                onChange={(e) => setSelectedProjectName(e.target.value)}
-                placeholder="Enter new project name"
-                className="border-border focus:ring-primary"
-                disabled={isSubmitting}
-                required
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-foreground">Priority</Label>
-          <Select 
-            value={selectedPriority} 
-            onValueChange={(value: "High" | "Med" | "Low") => setSelectedPriority(value)}
+          <Input
+            value={selectedProjectName}
+            onChange={(e) => setSelectedProjectName(e.target.value)}
+            placeholder="Project name"
+            className="border-border focus:ring-primary"
             disabled={isSubmitting}
-          >
-            <SelectTrigger className="w-full bg-background border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background border-border shadow-lg z-50">
-              <SelectItem value="High" className="cursor-pointer hover:bg-muted">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    High
-                  </span>
-                </div>
-              </SelectItem>
-              <SelectItem value="Med" className="cursor-pointer hover:bg-muted">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    Medium
-                  </span>
-                </div>
-              </SelectItem>
-              <SelectItem value="Low" className="cursor-pointer hover:bg-muted">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Low
-                  </span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            required
+          />
         </div>
 
         <div className="space-y-2">
@@ -298,13 +228,13 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
         
         <div className="flex gap-2">
           <Button 
-            type="submit" 
-            size="sm" 
-            className="bg-gradient-primary"
-            disabled={isSubmitting || !taskText.trim()}
-          >
-            {isSubmitting ? "Adding..." : "Add task"}
-          </Button>
+  type="submit" 
+  size="sm" 
+  className="bg-gradient-primary text-primary-foreground disabled:opacity-100 disabled:pointer-events-none cursor-pointer"
+  disabled={isSubmitting || !taskText.trim()}
+>
+  {isSubmitting ? "Adding..." : "Add task"}
+</Button>
           <Button 
             type="button" 
             variant="outline" 

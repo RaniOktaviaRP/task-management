@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sun, Flame, Clock3, Calendar } from "lucide-react";
+import { Sun, Clock3, Calendar } from "lucide-react";
 import { TaskCard, type Task } from "@/components/TaskCard";
 import { WeeklyGoals } from "@/components/WeeklyGoals";
 import { CapacityBar } from "@/components/CapacityBar";
@@ -32,11 +32,11 @@ const getHeaders = (): HeadersInit => {
   const headers: HeadersInit = {
     "Content-Type": "application/json"
   };
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  
+
   return headers;
 };
 
@@ -61,7 +61,6 @@ export default function ToDoToday() {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentMode, setCurrentMode] = useState<"midday" | "eod" | "carryover">("midday");
-  const [streak, setStreak] = useState(3);
   const [reflections, setReflections] = useState<DailyReflection[]>([]);
   const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,11 +73,11 @@ export default function ToDoToday() {
         const response = await fetch(`${API_BASE_URL}/profiles`, {
           headers
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch user profile');
         }
-        
+
         const profile = await response.json();
         setUserProfile(profile);
       } catch (error) {
@@ -89,7 +88,7 @@ export default function ToDoToday() {
         setIsLoading(false);
       }
     };
-    
+
     if (user) {
       fetchUserProfile();
     } else {
@@ -114,7 +113,7 @@ export default function ToDoToday() {
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     // Update UI immediately
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === taskId ? { ...task, status: status as "todo" | "in-progress" | "completed" } : task
     ));
 
@@ -130,14 +129,14 @@ export default function ToDoToday() {
         headers,
         body: JSON.stringify({ status: dbStatus }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to update task status');
       }
     } catch (error) {
       console.error('Error updating task status:', error);
       // Revert UI change on error
-      setTasks(prev => prev.map(task => 
+      setTasks(prev => prev.map(task =>
         task.id === taskId ? { ...task, status: "todo" as const } : task
       ));
       toast({
@@ -150,22 +149,22 @@ export default function ToDoToday() {
 
   const saveTaskDetails = async (taskId: string, deliverable: string, bottleneck: string, progress?: string) => {
     console.log('saveTaskDetails called', { taskId, deliverable, bottleneck, progress });
-    
+
     // Update local state immediately for better UX
     const previousTasks = [...tasks];
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === taskId ? { ...task, deliverable, bottleneck, progress } : task
     ));
 
     try {
       const headers = getHeaders();
-      
+
       // Prepare update data
-      const updateData: any = { 
-        deliverable: deliverable || null, 
-        bottleneck: bottleneck || null 
+      const updateData: any = {
+        deliverable: deliverable || null,
+        bottleneck: bottleneck || null
       };
-      
+
       if (progress !== undefined) {
         updateData.progress = progress || null;
       }
@@ -177,15 +176,15 @@ export default function ToDoToday() {
         headers,
         body: JSON.stringify(updateData),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Server response not OK:', errorText);
         throw new Error(`Failed to save task details: ${response.status} ${response.statusText}`);
       }
-      
+
       console.log('Task details saved successfully');
-      
+
       toast({
         title: "Task details saved",
         description: "Task details have been updated successfully.",
@@ -203,17 +202,17 @@ export default function ToDoToday() {
   };
 
   const updateMiddayStatus = (taskId: string, status: "on-track" | "at-risk" | "blocked") => {
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === taskId ? { ...task, middayStatus: status } : task
     ));
   };
 
   const updateCarryoverProgress = async (taskId: string, progress: string) => {
     const previousTasks = [...tasks];
-    
+
     try {
       // Update local state
-      setTasks(prev => prev.map(task => 
+      setTasks(prev => prev.map(task =>
         task.id === taskId ? { ...task, progress } : task
       ));
 
@@ -245,18 +244,18 @@ export default function ToDoToday() {
   };
 
   const updateEODOutcome = (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, notes?: string) => {
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === taskId ? { ...task, eodOutcome: outcome, deliverable, notes } : task
     ));
   };
 
   const markContinueTomorrow = async (taskId: string, progress: string) => {
     console.log('markContinueTomorrow called with taskId:', taskId, 'progress:', progress);
-    
+
     const previousTasks = [...tasks];
-    
+
     // Update local state immediately for better UX
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === taskId ? { ...task, continueTomorrow: true, progress: progress } : task
     ));
 
@@ -265,7 +264,7 @@ export default function ToDoToday() {
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           continue_tomorrow: true,
           progress: progress || null
         }),
@@ -298,23 +297,23 @@ export default function ToDoToday() {
   const addTask = async (newTask: Omit<Task, 'id'>) => {
     try {
       const headers = getHeaders();
-      
+
       // Find existing project or create new one
       let projectId = null;
       const existingProject = projects?.find(p => p.name === newTask.project);
-      
+
       if (existingProject) {
         projectId = existingProject.id;
       } else {
         // Create new project with required trend field
-          const projectData = {
-            name: newTask.project,
-            description: newTask.goal || `Project for ${newTask.project}`,
-            trend: "stable",
-            confidence: 50,   // ✅ tambahkan default
-            progress: 50,     // ✅ tambahkan default
-            user_id: user?.id || "", // kalau backend butuh user
-          };
+        const projectData = {
+          name: newTask.project,
+          description: newTask.goal || `Project for ${newTask.project}`,
+          trend: "stable",
+          confidence: 50,   // ✅ tambahkan default
+          progress: 50,     // ✅ tambahkan default
+          user_id: user?.id || "", // kalau backend butuh user
+        };
 
         console.log('Creating new project with data:', projectData);
 
@@ -329,7 +328,7 @@ export default function ToDoToday() {
           console.error('Project creation failed:', errorText);
           throw new Error(`Failed to create project: ${errorText}`);
         }
-        
+
         const newProject = await response.json();
         projectId = newProject.id;
         console.log('New project created with ID:', projectId);
@@ -362,7 +361,7 @@ export default function ToDoToday() {
         console.error('Task creation failed:', errorText);
         throw new Error(`Failed to create task: ${errorText}`);
       }
-      
+
       const newDbTask = await response.json();
       console.log('New task created:', newDbTask);
 
@@ -389,13 +388,13 @@ export default function ToDoToday() {
 
   const deleteTask = async (taskId: string) => {
     const previousTasks = [...tasks];
-    
+
     try {
       // Remove from local state immediately
       setTasks(prev => prev.filter(task => task.id !== taskId));
-      
+
       await deleteTaskFromDB(taskId);
-      
+
       toast({
         title: "Task deleted",
         description: "Task has been removed successfully"
@@ -422,17 +421,17 @@ export default function ToDoToday() {
   const saveReflection = (wentWell: string, whereStuck: string) => {
     const newReflection: DailyReflection = {
       id: Date.now().toString(),
-      date: new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      date: new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       }),
       wentWell,
       whereStuck,
       createdAt: new Date()
     };
-    
+
     setReflections(prev => [newReflection, ...prev]);
   };
 
@@ -450,7 +449,7 @@ export default function ToDoToday() {
   }
 
   // Filter tasks based on current mode
-  const filteredTasks = currentMode === "carryover" 
+  const filteredTasks = currentMode === "carryover"
     ? tasks.filter(task => task.continueTomorrow === true)
     : tasks;
 
@@ -476,33 +475,21 @@ export default function ToDoToday() {
                         {greeting.text}, Guest 🌤️
                       </h1>
                     </div>
-                    <Button 
-                      variant="default" 
-                      className="bg-gradient-primary text-primary-foreground" 
-                      onClick={() => window.location.href = '/auth'}
-                    >
-                      Sign In
-                    </Button>
                   </div>
                 )}
               </div>
-              
-              {/* Tampilkan bagian kanan header hanya jika user sudah login */}
-              {user && (
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="text-sm">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), 0, 1).getDay()) / 7)}
-                  </Badge>
-                  <Badge className="bg-gradient-success text-success-foreground">
-                    <Flame className="w-3 h-3 mr-1" />
-                    Streak: {streak} days
-                  </Badge>
-                  <Button variant="default" size="sm" className="bg-gradient-primary text-primary-foreground">
-                    Quick Add [⌘K]
-                  </Button>
-                </div>
-              )}
+
+              {/* Bagian kanan header - tampil untuk semua user */}
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className="text-sm">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), 0, 1).getDay()) / 7)}
+                </Badge>
+                
+                <Button variant="default" size="sm" className="bg-gradient-primary text-primary-foreground">
+                  Quick Add [⌘K]
+                </Button>
+              </div>
             </div>
           </div>
         </header>
@@ -524,13 +511,13 @@ export default function ToDoToday() {
               ].map((mode) => (
                 <Button
                   key={mode.key}
-                  variant="default"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentMode(mode.key as any)}
                   className={
-                    currentMode === mode.key 
-                      ? "bg-gradient-primary text-primary-foreground" 
-                      : "border-border text-foreground hover:bg-muted"
+                    currentMode === mode.key
+                      ? "bg-gradient-primary text-primary-foreground border border-border" // aktif → ada bg
+                      : "border border-border text-foreground hover:bg-muted" // tidak aktif → transparan
                   }
                 >
                   {mode.label}
@@ -543,94 +530,111 @@ export default function ToDoToday() {
           <div className="space-y-4">
             {/* Quick Add - Only show for authenticated users */}
             {user && <QuickAdd onAddTask={addTask} />}
-            
-            {currentMode === "midday" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock3 className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Midday vibes check ✨</h2>
-                  <span className="text-sm text-muted-foreground">09:00 — 13:00</span>
+
+            {/* Guest message untuk task management */}
+            {!user && (
+              <div className="text-center py-12">
+                <div className="text-lg text-muted-foreground mb-4">
+                  Please login to view and manage your tasks
                 </div>
-                
-                {filteredTasks.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No tasks found. {user ? "Add a task to get started!" : "Sign in to manage tasks."}
-                  </div>
-                ) : (
-                  filteredTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isMiddayMode={true}
-                      isGuest={!user}
-                      onStatusChange={updateTaskStatus}
-                      onMiddayUpdate={updateMiddayStatus}
-                      onSaveDetails={saveTaskDetails}
-                      onDelete={deleteTask}
-                      onContinueTomorrow={markContinueTomorrow}
-                    />
-                  ))
-                )}
+                <Button onClick={() => window.location.href = '/auth'} className="bg-gradient-primary">
+                  Login
+                </Button>
               </div>
             )}
 
-            {currentMode === "eod" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge className="bg-gradient-success text-success-foreground">🏁</Badge>
-                  <h2 className="text-lg font-semibold text-foreground">Victory lap</h2>
-                  <span className="text-sm text-muted-foreground">13:00 — 17:00</span>
-                </div>
-                
-                {filteredTasks.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No tasks found. {user ? "Add a task to get started!" : "Sign in to manage tasks."}
-                  </div>
-                ) : (
-                  filteredTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isEODMode={true}
-                      isGuest={!user}
-                      onStatusChange={updateTaskStatus}
-                      onEODUpdate={updateEODOutcome}
-                      onSaveDetails={saveTaskDetails}
-                      onDelete={deleteTask}
-                      onContinueTomorrow={markContinueTomorrow}
-                    />
-                  ))
-                )}
-              </div>
-            )}
+            {/* Task content hanya untuk user yang login */}
+            {user && (
+              <>
+                {currentMode === "midday" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Clock3 className="w-5 h-5 text-primary" />
+                      <h2 className="text-lg font-semibold text-foreground">Midday vibes check ✨</h2>
+                      <span className="text-sm text-muted-foreground">09:00 — 13:00</span>
+                    </div>
 
-            {currentMode === "carryover" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Badge className="bg-warning/10 text-warning">📅</Badge>
-                  <h2 className="text-lg font-semibold text-foreground">Continue Tomorrow</h2>
-                  <span className="text-sm text-muted-foreground">Tasks with obstacles</span>
-                </div>
-                
-                {filteredTasks.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No tasks marked to continue tomorrow.
+                    {filteredTasks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No tasks found. Add a task to get started!
+                      </div>
+                    ) : (
+                      filteredTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          isMiddayMode={true}
+                          isGuest={!user}
+                          onStatusChange={updateTaskStatus}
+                          onMiddayUpdate={updateMiddayStatus}
+                          onSaveDetails={saveTaskDetails}
+                          onDelete={deleteTask}
+                          onContinueTomorrow={markContinueTomorrow}
+                        />
+                      ))
+                    )}
                   </div>
-                ) : (
-                  filteredTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isCarryoverMode={true}
-                      isGuest={!user}
-                      onStatusChange={updateTaskStatus}
-                      onCarryoverUpdate={updateCarryoverProgress}
-                      onSaveDetails={saveTaskDetails}
-                      onDelete={deleteTask}
-                    />
-                  ))
                 )}
-              </div>
+
+                {currentMode === "eod" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge className="bg-gradient-success text-success-foreground">🏁</Badge>
+                      <h2 className="text-lg font-semibold text-foreground">Victory lap</h2>
+                      <span className="text-sm text-muted-foreground">13:00 — 17:00</span>
+                    </div>
+
+                    {filteredTasks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No tasks found. Add a task to get started!
+                      </div>
+                    ) : (
+                      filteredTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          isEODMode={true}
+                          isGuest={!user}
+                          onStatusChange={updateTaskStatus}
+                          onEODUpdate={updateEODOutcome}
+                          onSaveDetails={saveTaskDetails}
+                          onDelete={deleteTask}
+                          onContinueTomorrow={markContinueTomorrow}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {currentMode === "carryover" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge className="bg-warning/10 text-warning">📅</Badge>
+                      <h2 className="text-lg font-semibold text-foreground">Continue Tomorrow</h2>
+                      <span className="text-sm text-muted-foreground">Tasks with obstacles</span>
+                    </div>
+
+                    {filteredTasks.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No tasks marked to continue tomorrow.
+                      </div>
+                    ) : (
+                      filteredTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          isCarryoverMode={true}
+                          isGuest={!user}
+                          onStatusChange={updateTaskStatus}
+                          onCarryoverUpdate={updateCarryoverProgress}
+                          onSaveDetails={saveTaskDetails}
+                          onDelete={deleteTask}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

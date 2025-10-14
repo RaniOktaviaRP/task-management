@@ -7,6 +7,7 @@ import {
   Calendar,
   AlertTriangle,
   Users,
+  CalendarDays,
 } from "lucide-react";
 import { TaskCard, type Task } from "@/components/TaskCard";
 import { WeeklyGoals } from "@/components/WeeklyGoals";
@@ -90,8 +91,8 @@ const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
       dbTask.priority === "high"
         ? "High"
         : dbTask.priority === "medium"
-        ? "Med"
-        : "Low",
+          ? "Med"
+          : "Low",
     status: dbTask.status || "todo",
     difficulty: dbTask.difficulty_level || "easy",
     deliverable: dbTask.deliverable || "",
@@ -660,6 +661,19 @@ export default function Index() {
   const greeting = getCurrentTimeGreeting();
   const GreetingIcon = greeting.icon;
 
+  const handleLoginClick = () => {
+    window.location.href = "/auth";
+  };
+
+  // Calculate week number
+  const getWeekNumber = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now.getTime() - start.getTime();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    return Math.ceil(diff / oneWeek);
+  };
+
   // Filter users berdasarkan role
   const filteredUsers = usersData.filter((user) => {
     const userRole = (user.role || "").toUpperCase().trim();
@@ -745,56 +759,40 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <GreetingIcon className="w-6 h-6 text-primary" />
-                {user ? (
-                  <div className="flex flex-col">
-                    <h1 className="text-xl font-semibold text-foreground">
-                      {greeting.text},{" "}
-                      {userProfile?.full_name || user.full_name || user.email}{" "}
-                      🌤️
-                    </h1>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                      <h1 className="text-xl font-semibold text-foreground">
-                        {greeting.text}, Guest 🌤️
-                      </h1>
-                    </div>
-                    <Button
-                      variant="default"
-                      className="bg-gradient-primary text-primary-foreground"
-                      onClick={() => (window.location.href = "/auth")}
-                    >
-                      Sign In
+                <h1 className="text-xl font-semibold text-foreground">
+                  {greeting.text}, {isGuest ? 'Guest' : userProfile?.full_name || user?.full_name || user?.email || 'User'} 🌤️
+                  {isGuest && <span className="text-sm font-normal text-muted-foreground ml-2">(Read-only mode)</span>}
+                </h1>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className="text-sm">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Week {getWeekNumber()}
+                </Badge>
+                <Badge className="bg-gradient-success text-success-foreground">
+                      <Flame className="w-3 h-3 mr-1" />
+                      Streak: {streak} days
+                    </Badge>
+                {!isGuest && (
+                  <>
+                    <Button size="sm" className="bg-gradient-primary">
+                      Quick Add [⌘K]
                     </Button>
-                  </div>
+                  </>
+                )}
+                
+                {isGuest && (
+                  <Button 
+                    size="sm" 
+                    variant="default" 
+                    onClick={handleLoginClick}
+                    className="bg-gradient-primary"
+                  >
+                    Login to Create Tasks
+                  </Button>
                 )}
               </div>
-
-              {user && (
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="text-sm">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Week{" "}
-                    {Math.ceil(
-                      (new Date().getDate() +
-                        new Date(new Date().getFullYear(), 0, 1).getDay()) /
-                        7
-                    )}
-                  </Badge>
-                  <Badge className="bg-gradient-success text-success-foreground">
-                    <Flame className="w-3 h-3 mr-1" />
-                    Streak: {streak} days
-                  </Badge>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-gradient-primary text-primary-foreground"
-                  >
-                    Quick Add [⌘K]
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         </header>

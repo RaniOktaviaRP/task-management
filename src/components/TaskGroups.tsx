@@ -50,7 +50,7 @@ export function TaskGroups({
   onDelete,
   onContinueTomorrow
 }: TaskGroupsProps) {
-  const [groupBy, setGroupBy] = useState<GroupByOption>("project");
+  const [groupBy, setGroupBy] = useState<GroupByOption>("none");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["All Projects"]));
   const [expandedTaskDetails, setExpandedTaskDetails] = useState<Set<string>>(new Set());
 

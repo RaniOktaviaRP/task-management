@@ -22,10 +22,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-<<<<<<< HEAD
-
-# Next.js build output
 .next/
-=======
-.next/
->>>>>>> 48cd61a12528a6b5e14903ea7cff98317a48dded

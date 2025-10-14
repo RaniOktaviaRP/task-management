@@ -2,9 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ==========================================================
+   🌈 GLOBAL DESIGN SYSTEM (Dark Turquoise Theme)
+   Semua warna pakai format HSL agar konsisten dan mudah dikontrol.
+   ========================================================== */
 
 @layer base {
   :root {
@@ -13,52 +14,52 @@ All colors MUST be HSL.
     --foreground: 210 20 85;          /* Soft light blue-gray #D1D9E6 */
 
     --card: 222 15 10;                /* Slightly lighter navy #131A21 */
-    --card-foreground: 210 20 85;     /* Soft light blue-gray */
+    --card-foreground: 210 20 85;
 
-    --popover: 222 15 10;             /* Dark navy */
-    --popover-foreground: 210 20 85;  /* Soft light blue-gray */
+    --popover: 222 15 10;
+    --popover-foreground: 210 20 85;
 
     /* Primary: Calm Turquoise */
     --primary: 180 60 55;             /* Soft turquoise #4CBFAD */
-    --primary-foreground: 222 15 8;   /* Dark background for contrast */
+    --primary-foreground: 222 15 8;
     --primary-glow: 180 60 70;        /* Lighter turquoise glow */
 
     /* Secondary: Warm Gray */
-    --secondary: 220 15 15;           /* Warm dark gray #232831 */
+    --secondary: 220 15 15;
     --secondary-foreground: 210 20 75;
 
     /* Muted: Darker Warm Gray */
-    --muted: 220 15 12;               /* Darker warm gray #1C212A */
-    --muted-foreground: 210 15 65;    /* Muted light gray */
+    --muted: 220 15 12;
+    --muted-foreground: 210 15 65;
 
     /* Accent: Soft Teal */
-    --accent: 175 50 50;              /* Calming teal #40B5A8 */
+    --accent: 175 50 50;
     --accent-foreground: 222 15 8;
 
     /* Light Blue Accent - Peaceful */
-    --light-blue: 200 40 50;          /* Peaceful blue #4D7A99 */
+    --light-blue: 200 40 50;
     --light-blue-foreground: 210 20 85;
 
     /* Mint Green Accent - Soft */
-    --mint: 150 30 50;                /* Soft mint #59B380 */
+    --mint: 150 30 50;
     --mint-foreground: 222 15 8;
 
     /* Success: Gentle Green */
-    --success: 145 45 50;             /* Gentle green #4CAF7A */
+    --success: 145 45 50;
     --success-foreground: 222 15 8;
 
     /* Warning: Warm Amber */
-    --warning: 35 80 60;              /* Warm amber #E6A855 */
+    --warning: 35 80 60;
     --warning-foreground: 222 15 8;
 
     /* Destructive: Soft Red */
-    --destructive: 5 65 55;           /* Soft red #D67A6B */
+    --destructive: 5 65 55;
     --destructive-foreground: 222 15 8;
 
     /* Borders & Inputs */
-    --border: 220 15 20;              /* Subtle border #2A3038 */
-    --input: 222 15 12;               /* Dark input background */
-    --ring: 180 60 55;                /* Turquoise focus ring */
+    --border: 220 15 20;
+    --input: 222 15 12;
+    --ring: 180 60 55;
 
     /* Peaceful Dark Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(180 60% 55%), hsl(180 60% 70%));
@@ -67,28 +68,32 @@ All colors MUST be HSL.
     --gradient-subtle: linear-gradient(180deg, hsl(222 15% 8%), hsl(222 15% 10%));
     --gradient-accent: linear-gradient(135deg, hsl(175 50% 50%), hsl(175 50% 60%));
     --gradient-warm: linear-gradient(135deg, hsl(180 60% 55%), hsl(175 55% 55%));
-    
+
     /* Soft Dark Shadows */
-    --shadow-soft: 0 1px 3px 0 hsl(222 30% 5% / 0.3), 0 1px 2px 0 hsl(222 30% 5% / 0.15);
+    --shadow-soft: 0 1px 3px 0 hsl(222 30% 5% / 0.3),
+                   0 1px 2px 0 hsl(222 30% 5% / 0.15);
     --shadow-glow: 0 0 20px hsl(180 60% 55% / 0.15);
-    --shadow-card: 0 4px 6px -1px hsl(222 30% 5% / 0.3), 0 2px 4px -1px hsl(222 30% 5% / 0.15);
-    --shadow-elegant: 0 10px 15px -3px hsl(222 30% 5% / 0.3), 0 4px 6px -2px hsl(222 30% 5% / 0.1);
-    --shadow-float: 0 20px 25px -5px hsl(222 30% 5% / 0.3), 0 10px 10px -5px hsl(222 30% 5% / 0.1);
-    
+    --shadow-card: 0 4px 6px -1px hsl(222 30% 5% / 0.3),
+                   0 2px 4px -1px hsl(222 30% 5% / 0.15);
+    --shadow-elegant: 0 10px 15px -3px hsl(222 30% 5% / 0.3),
+                      0 4px 6px -2px hsl(222 30% 5% / 0.1);
+    --shadow-float: 0 20px 25px -5px hsl(222 30% 5% / 0.3),
+                    0 10px 10px -5px hsl(222 30% 5% / 0.1);
+
     --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --radius: 0.75rem;                /* Refined rounded corners */
+    --radius: 0.75rem;
 
-    /* Sidebar Peaceful Dark Theme */
-    --sidebar-background: 222 15 10;  /* Slightly lighter navy */
-    --sidebar-foreground: 210 20 85;  /* Soft light blue-gray */
-    --sidebar-primary: 180 60 55;     /* Turquoise accent */
+    /* Sidebar Dark Theme */
+    --sidebar-background: 222 15 10;
+    --sidebar-foreground: 210 20 85;
+    --sidebar-primary: 180 60 55;
     --sidebar-primary-foreground: 222 15 8;
-    --sidebar-accent: 220 15 15;      /* Warm dark gray */
+    --sidebar-accent: 220 15 15;
     --sidebar-accent-foreground: 210 20 75;
-    --sidebar-border: 220 15 20;      /* Subtle border */
-    --sidebar-ring: 180 60 55;        /* Turquoise focus */
+    --sidebar-border: 220 15 20;
+    --sidebar-ring: 180 60 55;
   }
 
   * {
@@ -98,5 +103,31 @@ All colors MUST be HSL.
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+}
+
+/* ==========================================================
+   🌈 CUSTOM UTILITIES
+   Tambahan supaya Tailwind bisa pakai gradient dari variable.
+   ========================================================== */
+@layer utilities {
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .bg-gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+
+  .bg-gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .bg-gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .bg-gradient-warm {
+    background: var(--gradient-warm);
   }
 }
