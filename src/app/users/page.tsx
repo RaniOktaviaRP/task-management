@@ -70,6 +70,8 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showTasksDialog, setShowTasksDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -514,7 +516,6 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
     setFormLoading(true);
     try {
       if (!session?.token) {
@@ -572,7 +573,19 @@ const UserManagement = () => {
       });
     } finally {
       setFormLoading(false);
+      setShowDeleteDialog(false);
+      setUserToDelete(null);
     }
+  };
+
+  const confirmDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteDialog(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteDialog(false);
+    setUserToDelete(null);
   };
 
   const startEdit = (user: User) => {
@@ -1075,7 +1088,7 @@ const UserManagement = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeleteUser(user.id)}
+                              onClick={() => confirmDeleteUser(user)}
                               disabled={user.id === currentUser?.id}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1229,6 +1242,62 @@ const UserManagement = () => {
                       </div>
                     );
                   })()}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent className="bg-card border border-border">
+              <DialogHeader>
+                <DialogTitle className="text-foreground">
+                  Delete User
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground">
+                  Are you sure you want to delete this user? This action cannot
+                  be undone.
+                </DialogDescription>
+              </DialogHeader>
+              {userToDelete && (
+                <div className="py-4">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <h4 className="font-medium text-foreground">
+                      {userToDelete.full_name || "No name set"}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {userToDelete.email}
+                    </p>
+                    <Badge
+                      className={`mt-2 ${
+                        userToDelete.role === "SE"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-gray-500 text-white border-gray-500"
+                      }`}
+                    >
+                      {userToDelete.role === "SE" ? "SE" : "SCE"}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="destructive"
+                  onClick={() =>
+                    userToDelete && handleDeleteUser(userToDelete.id)
+                  }
+                  disabled={formLoading}
+                  className="flex-1"
+                >
+                  {formLoading ? "Deleting..." : "Yes, Delete"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelDelete}
+                  disabled={formLoading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

@@ -105,6 +105,7 @@ const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
 const apiService = {
   getHeaders() {
     const token = Cookies.get("token");
+    console.log("API Headers - Token:", token ? "Present" : "Missing");
     return {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -232,8 +233,9 @@ const apiService = {
   },
 
   async updateTaskStatus(taskId: string, status: string): Promise<void> {
+    console.log("Updating task status:", { taskId, status });
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/tasks/${taskId}`,
       {
         method: "PUT",
         headers: this.getHeaders(),
@@ -241,14 +243,25 @@ const apiService = {
       }
     );
 
+    console.log(
+      "Update task status response:",
+      response.status,
+      response.statusText
+    );
+
     if (!response.ok) {
-      throw new Error("Failed to update task status");
+      const errorText = await response.text();
+      console.error("Update task status failed:", errorText);
+      throw new Error(
+        `Failed to update task status: ${response.status} ${errorText}`
+      );
     }
   },
 
   async updateTaskDetails(taskId: string, updates: any): Promise<void> {
+    console.log("Updating task details:", { taskId, updates });
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/tasks/${taskId}`,
       {
         method: "PUT",
         headers: this.getHeaders(),
@@ -256,8 +269,18 @@ const apiService = {
       }
     );
 
+    console.log(
+      "Update task details response:",
+      response.status,
+      response.statusText
+    );
+
     if (!response.ok) {
-      throw new Error("Failed to update task details");
+      const errorText = await response.text();
+      console.error("Update task details failed:", errorText);
+      throw new Error(
+        `Failed to update task details: ${response.status} ${errorText}`
+      );
     }
   },
 
@@ -293,6 +316,7 @@ const apiService = {
   },
 
   async deleteTask(taskId: string): Promise<void> {
+    console.log("Deleting task:", { taskId });
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/tasks/id/${taskId}`,
       {
@@ -301,8 +325,12 @@ const apiService = {
       }
     );
 
+    console.log("Delete task response:", response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error("Failed to delete task");
+      const errorText = await response.text();
+      console.error("Delete task failed:", errorText);
+      throw new Error(`Failed to delete task: ${response.status} ${errorText}`);
     }
   },
 };
