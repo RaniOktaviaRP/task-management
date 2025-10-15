@@ -24,13 +24,14 @@ interface DailyReflection {
 }
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 // Function to get headers with authorization
 const getHeaders = (): HeadersInit => {
-  const token = Cookies.get('token');
+  const token = Cookies.get("token");
   const headers: HeadersInit = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   };
 
   if (token) {
@@ -47,12 +48,18 @@ const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => ({
   project: projectName,
   goal: "Project Goal",
   effort: dbTask.effort === 1 ? "S" : dbTask.effort === 2 ? "M" : "L",
-  priority: dbTask.priority === "high" ? "High" : dbTask.priority === "low" ? "Low" : "Med",
+  priority:
+    dbTask.priority === "high"
+      ? "High"
+      : dbTask.priority === "low"
+      ? "Low"
+      : "Med",
   status: dbTask.status as "todo" | "in-progress" | "completed",
+  difficulty: dbTask.difficulty_level || "easy",
   deliverable: dbTask.deliverable || "",
   bottleneck: dbTask.bottleneck || "",
   progress: dbTask.progress || "",
-  continueTomorrow: dbTask.continue_tomorrow || false
+  continueTomorrow: dbTask.continue_tomorrow || false,
 });
 
 export default function ToDoToday() {
@@ -60,9 +67,15 @@ export default function ToDoToday() {
   const { projects, loading, deleteTask: deleteTaskFromDB } = useProjects();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [currentMode, setCurrentMode] = useState<"midday" | "eod" | "carryover">("midday");
+  const [currentMode, setCurrentMode] = useState<
+    "midday" | "eod" | "carryover"
+  >("midday");
+  const [streak, setStreak] = useState(3);
   const [reflections, setReflections] = useState<DailyReflection[]>([]);
-  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string | null;
+    email: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user profile
@@ -71,19 +84,19 @@ export default function ToDoToday() {
       try {
         const headers = getHeaders();
         const response = await fetch(`${API_BASE_URL}/profiles`, {
-          headers
+          headers,
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch user profile');
+          throw new Error("Failed to fetch user profile");
         }
 
         const profile = await response.json();
         setUserProfile(profile);
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        console.error("Error fetching user profile:", error);
         // Fallback
-        setUserProfile({ full_name: null, email: 'User' });
+        setUserProfile({ full_name: null, email: "User" });
       } finally {
         setIsLoading(false);
       }
@@ -100,7 +113,7 @@ export default function ToDoToday() {
   useEffect(() => {
     if (projects && projects.length > 0) {
       const allTasks: Task[] = [];
-      projects.forEach(project => {
+      projects.forEach((project) => {
         project.tasks.forEach((task: any) => {
           allTasks.push(mapDbTaskToUITask(task, project.name));
         });
@@ -113,9 +126,13 @@ export default function ToDoToday() {
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     // Update UI immediately
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, status: status as "todo" | "in-progress" | "completed" } : task
-    ));
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, status: status as "todo" | "in-progress" | "completed" }
+          : task
+      )
+    );
 
     // Map UI status to database status
     let dbStatus: "todo" | "in-progress" | "completed" = "todo";
@@ -125,20 +142,22 @@ export default function ToDoToday() {
     try {
       const headers = getHeaders();
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers,
         body: JSON.stringify({ status: dbStatus }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update task status');
+        throw new Error("Failed to update task status");
       }
     } catch (error) {
-      console.error('Error updating task status:', error);
+      console.error("Error updating task status:", error);
       // Revert UI change on error
-      setTasks(prev => prev.map(task =>
-        task.id === taskId ? { ...task, status: "todo" as const } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, status: "todo" as const } : task
+        )
+      );
       toast({
         variant: "destructive",
         title: "Error",
@@ -147,14 +166,28 @@ export default function ToDoToday() {
     }
   };
 
-  const saveTaskDetails = async (taskId: string, deliverable: string, bottleneck: string, progress?: string) => {
-    console.log('saveTaskDetails called', { taskId, deliverable, bottleneck, progress });
+  const saveTaskDetails = async (
+    taskId: string,
+    deliverable: string,
+    bottleneck: string,
+    progress?: string
+  ) => {
+    console.log("saveTaskDetails called", {
+      taskId,
+      deliverable,
+      bottleneck,
+      progress,
+    });
 
     // Update local state immediately for better UX
     const previousTasks = [...tasks];
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, deliverable, bottleneck, progress } : task
-    ));
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, deliverable, bottleneck, progress }
+          : task
+      )
+    );
 
     try {
       const headers = getHeaders();
@@ -162,49 +195,58 @@ export default function ToDoToday() {
       // Prepare update data
       const updateData: any = {
         deliverable: deliverable || null,
-        bottleneck: bottleneck || null
+
+        bottleneck: bottleneck || null,
       };
 
       if (progress !== undefined) {
         updateData.progress = progress || null;
       }
 
-      console.log('Saving task details with data:', updateData);
+      console.log("Saving task details with data:", updateData);
 
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers,
         body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Server response not OK:', errorText);
-        throw new Error(`Failed to save task details: ${response.status} ${response.statusText}`);
+        console.error("Server response not OK:", errorText);
+        throw new Error(
+          `Failed to save task details: ${response.status} ${response.statusText}`
+        );
       }
 
-      console.log('Task details saved successfully');
+      console.log("Task details saved successfully");
 
       toast({
         title: "Task details saved",
         description: "Task details have been updated successfully.",
       });
     } catch (error) {
-      console.error('Error saving task details:', error);
+      console.error("Error saving task details:", error);
       // Revert on error
       setTasks(previousTasks);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to save task details. Please check your connection.",
+        description:
+          "Failed to save task details. Please check your connection.",
       });
     }
   };
 
-  const updateMiddayStatus = (taskId: string, status: "on-track" | "at-risk" | "blocked") => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, middayStatus: status } : task
-    ));
+  const updateMiddayStatus = (
+    taskId: string,
+    status: "on-track" | "at-risk" | "blocked"
+  ) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId ? { ...task, middayStatus: status } : task
+      )
+    );
   };
 
   const updateCarryoverProgress = async (taskId: string, progress: string) => {
@@ -212,19 +254,19 @@ export default function ToDoToday() {
 
     try {
       // Update local state
-      setTasks(prev => prev.map(task =>
-        task.id === taskId ? { ...task, progress } : task
-      ));
+      setTasks((prev) =>
+        prev.map((task) => (task.id === taskId ? { ...task, progress } : task))
+      );
 
       const headers = getHeaders();
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers,
         body: JSON.stringify({ progress }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save progress');
+        throw new Error("Failed to save progress");
       }
 
       toast({
@@ -232,7 +274,7 @@ export default function ToDoToday() {
         description: "Task progress has been updated successfully.",
       });
     } catch (error) {
-      console.error('Error saving progress:', error);
+      console.error("Error saving progress:", error);
       // Revert on error
       setTasks(previousTasks);
       toast({
@@ -243,64 +285,85 @@ export default function ToDoToday() {
     }
   };
 
-  const updateEODOutcome = (taskId: string, outcome: "done" | "partial" | "not-started", deliverable?: string, notes?: string) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, eodOutcome: outcome, deliverable, notes } : task
-    ));
+  const updateEODOutcome = (
+    taskId: string,
+    outcome: "done" | "partial" | "not-started",
+    deliverable?: string,
+    notes?: string
+  ) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, eodOutcome: outcome, deliverable, notes }
+          : task
+      )
+    );
   };
 
   const markContinueTomorrow = async (taskId: string, progress: string) => {
-    console.log('markContinueTomorrow called with taskId:', taskId, 'progress:', progress);
+    console.log(
+      "markContinueTomorrow called with taskId:",
+      taskId,
+      "progress:",
+      progress
+    );
 
     const previousTasks = [...tasks];
 
     // Update local state immediately for better UX
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, continueTomorrow: true, progress: progress } : task
-    ));
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, continueTomorrow: true, progress: progress }
+          : task
+      )
+    );
 
     try {
       const headers = getHeaders();
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers,
         body: JSON.stringify({
           continue_tomorrow: true,
-          progress: progress || null
+          progress: progress || null,
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Database update error:', response.status, errorText);
-        throw new Error(`Failed to mark task to continue tomorrow: ${response.status}`);
+        console.error("Database update error:", response.status, errorText);
+        throw new Error(
+          `Failed to mark task to continue tomorrow: ${response.status}`
+        );
       }
 
-      console.log('Database updated successfully');
+      console.log("Database updated successfully");
 
       toast({
         title: "Task marked to continue tomorrow",
         description: "Task will be carried over to tomorrow.",
       });
     } catch (error) {
-      console.error('Error marking task to continue tomorrow:', error);
+      console.error("Error marking task to continue tomorrow:", error);
       // Revert on error
       setTasks(previousTasks);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to mark task to continue tomorrow. Please check your connection.",
+        description:
+          "Failed to mark task to continue tomorrow. Please check your connection.",
       });
     }
   };
 
-  const addTask = async (newTask: Omit<Task, 'id'>) => {
+  const addTask = async (newTask: Omit<Task, "id">) => {
     try {
       const headers = getHeaders();
 
       // Find existing project or create new one
       let projectId = null;
-      const existingProject = projects?.find(p => p.name === newTask.project);
+      const existingProject = projects?.find((p) => p.name === newTask.project);
 
       if (existingProject) {
         projectId = existingProject.id;
@@ -310,33 +373,45 @@ export default function ToDoToday() {
           name: newTask.project,
           description: newTask.goal || `Project for ${newTask.project}`,
           trend: "stable",
-          confidence: 50,   // ✅ tambahkan default
-          progress: 50,     // ✅ tambahkan default
+          confidence: 50, // ✅ tambahkan default
+          progress: 50, // ✅ tambahkan default
           user_id: user?.id || "", // kalau backend butuh user
         };
 
-        console.log('Creating new project with data:', projectData);
+        console.log("Creating new project with data:", projectData);
 
         const response = await fetch(`${API_BASE_URL}/projects`, {
-          method: 'POST',
+          method: "POST",
           headers,
           body: JSON.stringify(projectData),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Project creation failed:', errorText);
+          console.error("Project creation failed:", errorText);
           throw new Error(`Failed to create project: ${errorText}`);
         }
 
-        const newProject = await response.json();
+        const projectResponse = await response.json();
+        console.log("New project response:", projectResponse);
+
+        // Extract project data from the response wrapper
+        const newProject =
+          projectResponse.data || projectResponse.Data || projectResponse;
         projectId = newProject.id;
-        console.log('New project created with ID:', projectId);
+        console.log("New project created with ID:", projectId);
       }
 
       // Map UI values to database values
-      const dbEffort = newTask.effort === "S" ? 1 : newTask.effort === "M" ? 2 : 3;
-      const dbPriority = newTask.priority === "High" ? "high" : newTask.priority === "Low" ? "low" : "medium";
+      const dbEffort =
+        newTask.effort === "S" ? 1 : newTask.effort === "M" ? 2 : 3;
+      const dbPriority =
+        newTask.priority === "High"
+          ? "high"
+          : newTask.priority === "Low"
+          ? "low"
+          : "medium";
+      const dbDifficulty = newTask.difficulty || "moderate";
 
       // Insert into database
       const taskData = {
@@ -344,40 +419,44 @@ export default function ToDoToday() {
         project_id: projectId,
         effort: dbEffort,
         priority: dbPriority,
-        status: 'todo',
-        difficulty_level: 'moderate'
+        status: "todo",
+        difficulty_level: dbDifficulty,
       };
 
-      console.log('Creating task with data:', taskData);
+      console.log("Creating task with data:", taskData);
 
       const response = await fetch(`${API_BASE_URL}/tasks`, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(taskData),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Task creation failed:', errorText);
+        console.error("Task creation failed:", errorText);
         throw new Error(`Failed to create task: ${errorText}`);
       }
 
-      const newDbTask = await response.json();
-      console.log('New task created:', newDbTask);
+      const responseData = await response.json();
+      console.log("New task response:", responseData);
+
+      // Extract task data from the response wrapper
+      const newDbTask = responseData.data || responseData.Data || responseData;
+      console.log("Extracted task data:", newDbTask);
 
       // Add to local state with generated ID
       const uiTask: Task = {
         ...newTask,
-        id: newDbTask.id
+        id: newDbTask.id,
       };
-      setTasks(prev => [...prev, uiTask]);
+      setTasks((prev) => [...prev, uiTask]);
 
       toast({
         title: "Task added",
         description: "New task has been created successfully.",
       });
     } catch (error) {
-      console.error('Error adding task:', error);
+      console.error("Error adding task:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -391,22 +470,22 @@ export default function ToDoToday() {
 
     try {
       // Remove from local state immediately
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
 
       await deleteTaskFromDB(taskId);
 
       toast({
         title: "Task deleted",
-        description: "Task has been removed successfully"
+        description: "Task has been removed successfully",
       });
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
       // Revert on error
       setTasks(previousTasks);
       toast({
         title: "Error deleting task",
         description: "Failed to delete task",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -421,18 +500,18 @@ export default function ToDoToday() {
   const saveReflection = (wentWell: string, whereStuck: string) => {
     const newReflection: DailyReflection = {
       id: Date.now().toString(),
-      date: new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      date: new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       }),
       wentWell,
       whereStuck,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
-    setReflections(prev => [newReflection, ...prev]);
+    setReflections((prev) => [newReflection, ...prev]);
   };
 
   const greeting = getCurrentTimeGreeting();
@@ -449,9 +528,10 @@ export default function ToDoToday() {
   }
 
   // Filter tasks based on current mode
-  const filteredTasks = currentMode === "carryover"
-    ? tasks.filter(task => task.continueTomorrow === true)
-    : tasks;
+  const filteredTasks =
+    currentMode === "carryover"
+      ? tasks.filter((task) => task.continueTomorrow === true)
+      : tasks;
 
   return (
     <Layout>
@@ -465,7 +545,9 @@ export default function ToDoToday() {
                 {user ? (
                   <div className="flex flex-col">
                     <h1 className="text-xl font-semibold text-foreground">
-                      {greeting.text}, {userProfile?.full_name || user.full_name || user.email} 🌤️
+                      {greeting.text},{" "}
+                      {userProfile?.full_name || user.full_name || user.email}{" "}
+                      🌤️
                     </h1>
                   </div>
                 ) : (
@@ -507,7 +589,7 @@ export default function ToDoToday() {
               {[
                 { key: "midday", label: "MD (09:00 - 13:00)" },
                 { key: "eod", label: "EOD (13:00 - 17:00)" },
-                { key: "carryover", label: "📅 Continue Tomorrow" }
+                { key: "carryover", label: "📅 Continue Tomorrow" },
               ].map((mode) => (
                 <Button
                   key={mode.key}

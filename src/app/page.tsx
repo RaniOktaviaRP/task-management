@@ -461,15 +461,19 @@ export default function Index() {
   // Convert projects tasks to UI tasks
   useEffect(() => {
     if (projectsData && Array.isArray(projectsData)) {
+      console.log("Converting projects to tasks, projectsData:", projectsData);
       const allTasks = projectsData.flatMap((project) => {
         if (!project || !Array.isArray(project.tasks)) {
           return [];
         }
+        console.log(`Project ${project.name} has tasks:`, project.tasks);
         return project.tasks
           .filter((task) => task && task.id) // Filter out null/invalid tasks
           .map((task) => {
             try {
-              return mapDbTaskToUITask(task, project.name);
+              const uiTask = mapDbTaskToUITask(task, project.name);
+              console.log("Mapped task:", { original: task, mapped: uiTask });
+              return uiTask;
             } catch (error) {
               console.error("Error mapping task:", error, task);
               return null;
@@ -477,6 +481,7 @@ export default function Index() {
           })
           .filter(Boolean); // Remove null values
       });
+      console.log("Final allTasks array:", allTasks);
       setTasks(allTasks);
     }
   }, [projectsData]);
@@ -498,6 +503,22 @@ export default function Index() {
   }, [usersData, usersLoading, usersError]);
 
   const updateTaskStatus = async (taskId: string, status: string) => {
+    console.log("updateTaskStatus called with:", {
+      taskId,
+      status,
+      taskIdType: typeof taskId,
+    });
+
+    if (!taskId) {
+      console.error("Task ID is undefined or null!");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Task ID is missing. Please refresh the page.",
+      });
+      return;
+    }
+
     try {
       await apiService.updateTaskStatus(taskId, status);
 
@@ -719,7 +740,12 @@ export default function Index() {
           .filter((task) => task && task.id) // Filter out null/invalid tasks
           .map((task) => {
             try {
-              return mapDbTaskToUITask(task, project.name);
+              const mappedTask = mapDbTaskToUITask(task, project.name);
+              console.log(`User ${user.email} task mapping:`, {
+                original: task,
+                mapped: mappedTask,
+              });
+              return mappedTask;
             } catch (error) {
               console.error(
                 `Error mapping task for user ${user.id}:`,
@@ -731,6 +757,7 @@ export default function Index() {
           })
           .filter(Boolean); // Remove null values
       });
+      console.log(`User ${user.email} total tasks:`, userTasks);
       userTasksMap[user.id] = userTasks;
     } catch (error) {
       console.error(`Error processing tasks for user ${user.id}:`, error);
