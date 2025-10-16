@@ -428,6 +428,17 @@ const useUsersCustom = () => {
 export default function Index() {
   const { user } = useAuth();
   const isGuest = !user;
+  
+  // Debug authentication state
+  useEffect(() => {
+    const token = Cookies.get("token");
+    console.log("=== Authentication Debug ===");
+    console.log("User object:", user);
+    console.log("Token in cookies:", token ? "Present" : "Missing");
+    console.log("Is guest:", isGuest);
+    console.log("===========================");
+  }, [user, isGuest]);
+
   const {
     projects: projectsData,
     loading: projectsLoading,
@@ -563,6 +574,10 @@ export default function Index() {
     progress?: string
   ) => {
     try {
+      // Debug: Check if token exists
+      const token = Cookies.get("token");
+      console.log("Token check in saveTaskDetails:", token ? "Present" : "Missing");
+      
       // Find the current task to preserve existing continue_tomorrow value
       const currentTask = tasks.find((task) => task.id === taskId);
 
@@ -571,6 +586,8 @@ export default function Index() {
       if (bottleneck) updates.bottleneck = bottleneck;
       if (progress) updates.progress = progress;
       updates.continue_tomorrow = currentTask?.continueTomorrow || false;
+
+      console.log("Saving task details with data:", { taskId, updates });
 
       await apiService.updateTaskDetails(taskId, updates);
 
