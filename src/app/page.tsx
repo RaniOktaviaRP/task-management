@@ -91,8 +91,8 @@ const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => {
       dbTask.priority === "high"
         ? "High"
         : dbTask.priority === "medium"
-          ? "Med"
-          : "Low",
+        ? "Med"
+        : "Low",
     status: dbTask.status || "todo",
     difficulty: dbTask.difficulty_level || "easy",
     deliverable: dbTask.deliverable || "",
@@ -233,14 +233,21 @@ const apiService = {
     }
   },
 
-  async updateTaskStatus(taskId: string, status: string): Promise<void> {
+  async updateTaskStatus(
+    taskId: string,
+    status: string,
+    continueTomorrow?: boolean
+  ): Promise<void> {
     console.log("Updating task status:", { taskId, status });
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/tasks/${taskId}`,
       {
         method: "PUT",
         headers: this.getHeaders(),
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          continue_tomorrow: continueTomorrow || false,
+        }),
       }
     );
 
@@ -520,7 +527,14 @@ export default function Index() {
     }
 
     try {
-      await apiService.updateTaskStatus(taskId, status);
+      // Find the current task to preserve existing continue_tomorrow value
+      const currentTask = tasks.find((task) => task.id === taskId);
+
+      await apiService.updateTaskStatus(
+        taskId,
+        status,
+        currentTask?.continueTomorrow
+      );
 
       setTasks((prev) =>
         prev.map((task) =>
@@ -549,10 +563,14 @@ export default function Index() {
     progress?: string
   ) => {
     try {
+      // Find the current task to preserve existing continue_tomorrow value
+      const currentTask = tasks.find((task) => task.id === taskId);
+
       const updates: any = {};
       if (deliverable) updates.deliverable = deliverable;
       if (bottleneck) updates.bottleneck = bottleneck;
       if (progress) updates.progress = progress;
+      updates.continue_tomorrow = currentTask?.continueTomorrow || false;
 
       await apiService.updateTaskDetails(taskId, updates);
 
@@ -787,20 +805,31 @@ export default function Index() {
               <div className="flex items-center gap-3">
                 <GreetingIcon className="w-6 h-6 text-primary" />
                 <h1 className="text-xl font-semibold text-foreground">
-                  {greeting.text}, {isGuest ? 'Guest' : userProfile?.full_name || user?.full_name || user?.email || 'User'} 🌤️
-                  {isGuest && <span className="text-sm font-normal text-muted-foreground ml-2">(Read-only mode)</span>}
+                  {greeting.text},{" "}
+                  {isGuest
+                    ? "Guest"
+                    : userProfile?.full_name ||
+                      user?.full_name ||
+                      user?.email ||
+                      "User"}{" "}
+                  🌤️
+                  {isGuest && (
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      (Read-only mode)
+                    </span>
+                  )}
                 </h1>
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <Badge variant="outline" className="text-sm">
                   <Calendar className="w-3 h-3 mr-1" />
                   Week {getWeekNumber()}
                 </Badge>
                 <Badge className="bg-gradient-success text-success-foreground">
-                      <Flame className="w-3 h-3 mr-1" />
-                      Streak: {streak} days
-                    </Badge>
+                  <Flame className="w-3 h-3 mr-1" />
+                  Streak: {streak} days
+                </Badge>
                 {!isGuest && (
                   <>
                     <Button size="sm" className="bg-gradient-primary">
@@ -808,11 +837,11 @@ export default function Index() {
                     </Button>
                   </>
                 )}
-                
+
                 {isGuest && (
-                  <Button 
-                    size="sm" 
-                    variant="default" 
+                  <Button
+                    size="sm"
+                    variant="default"
                     onClick={handleLoginClick}
                     className="bg-gradient-primary"
                   >

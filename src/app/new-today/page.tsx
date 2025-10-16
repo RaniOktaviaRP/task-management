@@ -140,11 +140,17 @@ export default function ToDoToday() {
     if (status === "completed") dbStatus = "completed";
 
     try {
+      // Find the current task to preserve existing continue_tomorrow value
+      const currentTask = tasks.find((task) => task.id === taskId);
+
       const headers = getHeaders();
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: "PUT",
         headers,
-        body: JSON.stringify({ status: dbStatus }),
+        body: JSON.stringify({
+          status: dbStatus,
+          continue_tomorrow: currentTask?.continueTomorrow || false,
+        }),
       });
 
       if (!response.ok) {
@@ -192,11 +198,14 @@ export default function ToDoToday() {
     try {
       const headers = getHeaders();
 
+      // Find the current task to preserve existing continue_tomorrow value
+      const currentTask = tasks.find((task) => task.id === taskId);
+
       // Prepare update data
       const updateData: any = {
         deliverable: deliverable || null,
-
         bottleneck: bottleneck || null,
+        continue_tomorrow: currentTask?.continueTomorrow || false,
       };
 
       if (progress !== undefined) {
@@ -258,11 +267,17 @@ export default function ToDoToday() {
         prev.map((task) => (task.id === taskId ? { ...task, progress } : task))
       );
 
+      // Find the current task to preserve existing continue_tomorrow value
+      const currentTask = tasks.find((task) => task.id === taskId);
+
       const headers = getHeaders();
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: "PUT",
         headers,
-        body: JSON.stringify({ progress }),
+        body: JSON.stringify({
+          progress,
+          continue_tomorrow: currentTask?.continueTomorrow || false,
+        }),
       });
 
       if (!response.ok) {
@@ -565,10 +580,19 @@ export default function ToDoToday() {
               <div className="flex items-center gap-4">
                 <Badge variant="outline" className="text-sm">
                   <Calendar className="w-3 h-3 mr-1" />
-                  Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), 0, 1).getDay()) / 7)}
+                  Week{" "}
+                  {Math.ceil(
+                    (new Date().getDate() +
+                      new Date(new Date().getFullYear(), 0, 1).getDay()) /
+                      7
+                  )}
                 </Badge>
-                
-                <Button variant="default" size="sm" className="bg-gradient-primary text-primary-foreground">
+
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-gradient-primary text-primary-foreground"
+                >
                   Quick Add [⌘K]
                 </Button>
               </div>
@@ -619,7 +643,10 @@ export default function ToDoToday() {
                 <div className="text-lg text-muted-foreground mb-4">
                   Please login to view and manage your tasks
                 </div>
-                <Button onClick={() => window.location.href = '/auth'} className="bg-gradient-primary">
+                <Button
+                  onClick={() => (window.location.href = "/auth")}
+                  className="bg-gradient-primary"
+                >
                   Login
                 </Button>
               </div>
@@ -632,8 +659,12 @@ export default function ToDoToday() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-4">
                       <Clock3 className="w-5 h-5 text-primary" />
-                      <h2 className="text-lg font-semibold text-foreground">Midday vibes check ✨</h2>
-                      <span className="text-sm text-muted-foreground">09:00 — 13:00</span>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Midday vibes check ✨
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        09:00 — 13:00
+                      </span>
                     </div>
 
                     {filteredTasks.length === 0 ? (
@@ -661,9 +692,15 @@ export default function ToDoToday() {
                 {currentMode === "eod" && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-4">
-                      <Badge className="bg-gradient-success text-success-foreground">🏁</Badge>
-                      <h2 className="text-lg font-semibold text-foreground">Victory lap</h2>
-                      <span className="text-sm text-muted-foreground">13:00 — 17:00</span>
+                      <Badge className="bg-gradient-success text-success-foreground">
+                        🏁
+                      </Badge>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Victory lap
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        13:00 — 17:00
+                      </span>
                     </div>
 
                     {filteredTasks.length === 0 ? (
@@ -692,8 +729,12 @@ export default function ToDoToday() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-4">
                       <Badge className="bg-warning/10 text-warning">📅</Badge>
-                      <h2 className="text-lg font-semibold text-foreground">Continue Tomorrow</h2>
-                      <span className="text-sm text-muted-foreground">Tasks with obstacles</span>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Continue Tomorrow
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        Tasks with obstacles
+                      </span>
                     </div>
 
                     {filteredTasks.length === 0 ? (
