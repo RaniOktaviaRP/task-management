@@ -234,29 +234,17 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
 
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">Project</Label>
-          <Select
+          <Input
             value={selectedProjectName}
-            onValueChange={setSelectedProjectName}
+            onChange={(e) => setSelectedProjectName(e.target.value)}
+            placeholder="Project name"
+            className="border-border focus:ring-primary"
             disabled={isSubmitting}
-          >
-            <SelectTrigger className="w-full bg-background border-border">
-              <SelectValue placeholder="Select a project" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border-border shadow-lg z-50">
-              {projectNames.map((projectName) => (
-                <SelectItem
-                  key={projectName}
-                  value={projectName}
-                  className="cursor-pointer hover:bg-muted"
-                >
-                  {projectName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            required
+          />
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
             Priority
           </Label>
@@ -288,7 +276,7 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
 
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
@@ -327,11 +315,6 @@ export function QuickAdd({ onAddTask, currentMode = "midday" }: QuickAddProps) {
           <code className="bg-muted px-1 rounded">
             title #project @goal ^effort
           </code>
-          {projectNames.length > 0 && (
-            <div className="mt-1">
-              Available projects: {projectNames.join(", ")}
-            </div>
-          )}
         </div>
 
         <div className="flex gap-2">
