@@ -681,13 +681,14 @@ const UserManagement = () => {
                 </p>
               </div>
 
-              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2 bg-gradient-primary text-primary-foreground shadow-card hover:shadow-glow transition-all">
-                    <Plus className="w-4 h-4" />
-                    Add New User
-                  </Button>
-                </DialogTrigger>
+              {isCurrentUserSE() && (
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center gap-2 bg-gradient-primary text-primary-foreground shadow-card hover:shadow-glow transition-all">
+                      <Plus className="w-4 h-4" />
+                      Add New User
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="bg-card border border-border">
                   <DialogHeader>
                     <DialogTitle className="text-foreground">
@@ -797,6 +798,7 @@ const UserManagement = () => {
                   </form>
                 </DialogContent>
               </Dialog>
+              )}
             </div>
 
             {/* Stats */}
