@@ -46,7 +46,7 @@ const mapDbTaskToUITask = (dbTask: any, projectName: string): Task => ({
   id: dbTask.id,
   title: dbTask.title,
   project: projectName,
-  goal: "Project Goal",
+  goal: `Project for ${projectName}`,
   effort: dbTask.effort === 1 ? "S" : dbTask.effort === 2 ? "M" : "L",
   priority:
     dbTask.priority === "high"
