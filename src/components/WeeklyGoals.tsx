@@ -37,8 +37,8 @@ export function WeeklyGoals() {
             <span className="text-sm">{goal.name}</span>
             <div className="flex items-center gap-1 ml-2">
               <span className="text-xs font-medium">{goal.confidence}%</span>
-              {goal.trend === "up" && <TrendingUp className="w-3 h-3 text-success" />}
-              {goal.trend === "down" && <TrendingDown className="w-3 h-3 text-destructive" />}
+              {goal.trend === "up" && <Minus className="w-3 h-3 text-muted-foreground" />}
+              {goal.trend === "down" && <Minus className="w-3 h-3 text-muted-foreground" />}
               {goal.trend === "stable" && <Minus className="w-3 h-3 text-muted-foreground" />}
             </div>
           </Badge>

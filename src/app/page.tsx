@@ -871,7 +871,7 @@ export default function Index() {
         </header>
 
         <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
-          {/* Pending Tasks */}
+          {/* PENDING TASKS - DITAMBAHKAN DI SINI */}
           {user && <PendingTasks onTaskReassigned={refetch} />}
 
           {/* Weekly Goals */}
