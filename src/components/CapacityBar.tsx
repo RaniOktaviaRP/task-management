@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
@@ -23,24 +23,27 @@ interface Project {
 // API service for capacity data
 const capacityService = {
   getHeaders() {
-    const token = Cookies.get('token');
+    const token = Cookies.get("token");
     return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     };
   },
 
   async fetchProjects(): Promise<Project[]> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
-      headers: this.getHeaders()
-    });
-    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/projects`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+
     if (!response.ok) {
-      throw new Error('Failed to fetch projects');
+      throw new Error("Failed to fetch projects");
     }
-    
+
     const projects = await response.json();
-    
+
     // Fetch tasks for each project
     const projectsWithTasks = await Promise.all(
       projects.map(async (project: Project) => {
@@ -49,7 +52,7 @@ const capacityService = {
             `${process.env.NEXT_PUBLIC_API_URL}/tasks/project/${project.id}`,
             { headers: this.getHeaders() }
           );
-          
+
           if (tasksResponse.ok) {
             const tasks = await tasksResponse.json();
             return { ...project, tasks };
@@ -60,9 +63,9 @@ const capacityService = {
         }
       })
     );
-    
+
     return projectsWithTasks;
-  }
+  },
 };
 
 // Custom hook untuk projects data
@@ -78,7 +81,7 @@ const useProjectsData = () => {
       setProjects(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch projects');
+      setError(err instanceof Error ? err.message : "Failed to fetch projects");
       setProjects([]);
     } finally {
       setLoading(false);
@@ -90,17 +93,26 @@ const useProjectsData = () => {
   }, []);
 
   // Calculate metrics
-  const totalTasks = projects.reduce((total, project) => total + project.tasks.length, 0);
-  
-  const completedTasks = projects.reduce((total, project) => 
-    total + project.tasks.filter(task => task.status === 'completed').length, 0
+  const totalTasks = projects.reduce(
+    (total, project) => total + project.tasks.length,
+    0
+  );
+
+  const completedTasks = projects.reduce(
+    (total, project) =>
+      total +
+      project.tasks.filter((task) => task.status === "completed").length,
+    0
   );
 
   const plannedHours = projects.reduce((total, project) => {
-    return total + project.tasks.reduce((taskTotal, task) => {
-      const hours = task.effort === 1 ? 0.5 : task.effort === 2 ? 1 : 2;
-      return taskTotal + hours;
-    }, 0);
+    return (
+      total +
+      project.tasks.reduce((taskTotal, task) => {
+        const hours = task.effort === 1 ? 0.5 : task.effort === 2 ? 1 : 2;
+        return taskTotal + hours;
+      }, 0)
+    );
   }, 0);
 
   return {
@@ -110,20 +122,23 @@ const useProjectsData = () => {
     totalTasks,
     completedTasks,
     plannedHours,
-    refetch: fetchProjects
+    refetch: fetchProjects,
   };
 };
 
 export function CapacityBar() {
-  const { projects, loading, totalTasks, completedTasks, plannedHours } = useProjectsData();
-  
+  const { projects, loading, totalTasks, completedTasks, plannedHours } =
+    useProjectsData();
+
   // Calculate capacity based on actual data
   const plannedTasks = totalTasks;
   const totalCapacity = 8; // Could be configurable
   const totalHours = 8; // Standard work day
-  
-  const progressPercentage = totalCapacity > 0 ? Math.min((plannedTasks / totalCapacity) * 100, 100) : 0;
-  const hoursPercentage = totalHours > 0 ? Math.min((plannedHours / totalHours) * 100, 100) : 0;
+
+  const progressPercentage =
+    totalCapacity > 0 ? Math.min((plannedTasks / totalCapacity) * 100, 100) : 0;
+  const hoursPercentage =
+    totalHours > 0 ? Math.min((plannedHours / totalHours) * 100, 100) : 0;
 
   if (loading) {
     return (
@@ -131,7 +146,9 @@ export function CapacityBar() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
-            <span className="font-medium text-foreground">Today's capacity</span>
+            <span className="font-medium text-foreground">
+              Today's capacity
+            </span>
           </div>
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
@@ -152,39 +169,38 @@ export function CapacityBar() {
           <span className="font-medium text-foreground">Today's capacity</span>
         </div>
         <span className="text-sm text-muted-foreground">
-          {plannedTasks}/{totalCapacity} tasks • {plannedHours.toFixed(1)}h/{totalHours}h
+          {plannedTasks}/{totalCapacity} tasks • {plannedHours.toFixed(1)}h/
+          {totalHours}h
         </span>
       </div>
-      
+
       {/* Tasks Progress */}
       <div className="mb-3">
         <div className="flex justify-between text-xs text-muted-foreground mb-1">
           <span>Tasks</span>
           <span>{Math.round(progressPercentage)}%</span>
         </div>
-        <Progress 
-          value={progressPercentage} 
-          className="h-2 bg-muted mb-2"
-        />
+        <Progress value={progressPercentage} className="h-2 bg-muted mb-2" />
       </div>
-      
+
       {/* Hours Progress */}
       <div>
         <div className="flex justify-between text-xs text-muted-foreground mb-1">
           <span>Hours</span>
           <span>{Math.round(hoursPercentage)}%</span>
         </div>
-        <Progress 
-          value={hoursPercentage} 
-          className="h-2 bg-muted"
-        />
+        <Progress value={hoursPercentage} className="h-2 bg-muted" />
       </div>
-      
+
       <div className="flex justify-between mt-2 text-xs text-muted-foreground">
         <span>
           Completed: {completedTasks}/{plannedTasks} tasks
         </span>
-        <span className={plannedHours > totalHours ? "text-warning" : "text-success"}>
+        <span
+          className={
+            plannedHours > totalHours ? "text-warning" : "text-success"
+          }
+        >
           {plannedHours > totalHours ? "Over capacity" : "Within capacity"}
         </span>
       </div>

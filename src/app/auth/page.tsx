@@ -140,7 +140,7 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="signin-usertype">User Type</Label>
                   <Select
                     value={role}
@@ -156,7 +156,7 @@ const Auth = () => {
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Password</Label>
                   <Input
